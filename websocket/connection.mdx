@@ -15,7 +15,7 @@ For basic connection setup, see the [Authentication](/websocket/authentication) 
 import { io } from 'socket.io-client';
 
 const socket = io('wss://api.byul.ai/news-v2', {
-  auth: { apiKey: byul_v2_your_api_key },
+  auth: { apiKey: 'byul_api_key' },
   
   // Production settings
   transports: ['websocket'], // WebSocket only, no polling fallback

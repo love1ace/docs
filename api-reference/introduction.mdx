@@ -1,33 +1,215 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: "Introduction"
+description: "Welcome to Byul AI News API v2 - Real-time financial news for developers and businesses"
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Getting Started
 
-## Welcome
+The Byul AI News API provides access to real-time financial news content from byul.ai. It supports both REST and WebSocket connections for various use cases.
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+<Info>
+Ready to get started? Check out our [Quick Examples](#quick-examples) below or explore the [endpoint documentation](/api-reference/endpoint/get).
+</Info>
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+## Base URL
+
+All REST API requests should be made to:
+
+```
+https://api.byul.ai/api/v2
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+All requests require an API key with the `byul_v2_` prefix. Include your API key in the request headers:
+
+```bash
+X-API-Key: byul_v2_your_api_key_here
+```
+
+<Warning>
+Keep your API key secure and do not expose it in client-side code. Get your API key from the [Dashboard](https://www.byul.ai/api/dashboard).
+</Warning>
+
+## Pricing Plans
+
+View detailed pricing plans and features at [byul.ai/api/pricing](https://www.byul.ai/api/pricing).
+
+**Quick Overview:**
+- **Test (Free)**: 100 calls/month, 30 req/min
+- **Starter ($19/month)**: 50K calls/month, 60 req/min  
+- **Pro ($99/month)**: Unlimited calls, 120 req/min + WebSocket
+- **Enterprise**: Custom pricing with advanced features
+
+<Info>
+**Need WebSocket?** Real-time streaming requires Pro or Enterprise plan. [View pricing](https://www.byul.ai/api/pricing).
+</Info>
+
+## Quick Examples
+
+### Fetch Latest News
+
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=10&minImportance=5" \
+  -H "X-API-Key: byul_v2_your_api_key_here"
+```
+
+### JavaScript Example
+
+```javascript
+const getNews = async () => {
+  const response = await fetch('https://api.byul.ai/api/v2/news?limit=10', {
+    headers: {
+      'X-API-Key': process.env.BYUL_API_KEY
+    }
+  });
+  
+  const data = await response.json();
+  console.log('Latest news:', data.items);
+};
+```
+
+### Python Example
+
+```python
+import requests
+
+response = requests.get(
+    'https://api.byul.ai/api/v2/news?limit=10',
+    headers={'X-API-Key': 'byul_v2_your_api_key_here'}
+)
+
+news = response.json()
+for article in news['items']:
+    print(f"{article['title']} - Importance: {article['importanceScore']}/10")
+```
+
+## Rate Limiting
+
+Rate limits vary by plan:
+
+- **Test**: 30 requests/minute
+- **Starter**: 60 requests/minute  
+- **Pro/Enterprise**: 120 requests/minute
+
+All responses include rate limit headers:
+
+```
+X-V2-RateLimit-Limit: 120
+X-V2-RateLimit-Remaining: 119
+X-V2-RateLimit-Used: 1
+X-V2-RateLimit-Reset: 1704628800
+```
+
+## HTTP Status Codes
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+  <div class="method-pill rounded-lg font-bold px-1.5 py-0.5 text-sm leading-5 bg-green-400/20 dark:bg-green-400/20 text-green-700 dark:text-green-400">200</div>
+  <span>Success</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+  <div class="method-pill rounded-lg font-bold px-1.5 py-0.5 text-sm leading-5 bg-orange-400/20 dark:bg-orange-400/20 text-orange-700 dark:text-orange-400">400</div>
+  <span>Bad Request - Invalid parameters</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+  <div class="method-pill rounded-lg font-bold px-1.5 py-0.5 text-sm leading-5 bg-red-400/20 dark:bg-red-400/20 text-red-700 dark:text-red-400">401</div>
+  <span>Unauthorized - API key required or invalid</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+  <div class="method-pill rounded-lg font-bold px-1.5 py-0.5 text-sm leading-5 bg-yellow-400/20 dark:bg-yellow-400/20 text-yellow-700 dark:text-yellow-400">402</div>
+  <span>Payment Required - Plan expired</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+  <div class="method-pill rounded-lg font-bold px-1.5 py-0.5 text-sm leading-5 bg-red-400/20 dark:bg-red-400/20 text-red-700 dark:text-red-400">403</div>
+  <span>Forbidden - Feature not available on current plan</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+  <div class="method-pill rounded-lg font-bold px-1.5 py-0.5 text-sm leading-5 bg-orange-400/20 dark:bg-orange-400/20 text-orange-700 dark:text-orange-400">429</div>
+  <span>Too Many Requests - Rate limit exceeded</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+  <div class="method-pill rounded-lg font-bold px-1.5 py-0.5 text-sm leading-5 bg-red-400/20 dark:bg-red-400/20 text-red-700 dark:text-red-400">500</div>
+  <span>Internal Server Error</span>
+</div>
+
+## Rate Limit Headers
+
+All responses include rate limit information:
+
+```
+X-V2-RateLimit-Limit: 120
+X-V2-RateLimit-Remaining: 119
+X-V2-RateLimit-Used: 1
+X-V2-RateLimit-Reset: 1704628800
+```
+
+## Error Responses
+
+All errors follow this format:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+{
+  "statusCode": 401,
+  "message": "API key is required. Please provide a valid V2 API key in the X-API-Key header or Authorization Bearer token.",
+  "error": "Unauthorized",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
 ```
+
+## Frequently Asked Questions
+
+**Q: What is the Byul API?**  
+The best API service that provides global economic news in real-time without delay. Get important financial market news instantly via REST API and WebSocket.
+
+**Q: What kind of news do you provide?**  
+We provide all economic news that affects the market in real-time, including global economic, financial, and corporate news, central bank announcements, and economic indicators. Global news is available in both Korean and English.
+
+**Q: Is there any delay in the news?**  
+Even the test plan can be used without delay. Byul aims to provide global economic news alerts as fast as possible without delay. Average response time is under 100ms.
+
+**Q: Is it free to use?**  
+A free plan is available for testing purposes. You get 100 API calls per month and 30 requests per minute, with access to real-time economic news.
+
+**Q: What data formats do you support?**  
+We provide data in JSON format and support both REST API and WebSocket. All timestamps are in ISO 8601 format (UTC).
+
+**Q: How do I get an API key?**  
+You can get an API key by signing up for an account. The issued API key starts with the `byul_v2_` prefix and must be included in all requests as the `X-API-Key` header.
+
+## Support and Status
+
+**Service Status**  
+Check real-time service status at [byul.ai Status Page](https://www.byul.ai/status).
+
+**Contact Us**  
+- For technical support or questions, please contact us via [Contact Us](https://www.byul.ai/contact)
+- Enterprise plan inquiries are also available through the same link
+
+**Important Notes**  
+- WebSocket requires Pro or Enterprise plan
+- All timestamps are in ISO 8601 format (UTC)  
+- Keep your API key secure and do not expose it on the client side
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Fetch News" href="/api-reference/endpoint/get">
+Get the latest financial news articles
+</Card>
+<Card title="Health Check" href="/api-reference/endpoint/health">
+Check API service status
+</Card>
+<Card title="WebSocket API" href="/websocket/introduction">
+Real-time news streaming (Pro/Enterprise)
+</Card>
+<Card title="API Status" href="https://www.byul.ai/status">
+Check real-time service status
+</Card>
+</CardGroup>

@@ -71,7 +71,7 @@ function handleAuthFailed(error) {
   console.error('Authentication failed:', error.message);
   
   // Check API key format
-  if (!byul_v2_your_api_key?.startsWith('byul_v2_')) {
+  if (!byul_api_key?.startsWith('byul_v2_')) {
     console.error('Invalid API key format. Must start with byul_v2_');
   }
   

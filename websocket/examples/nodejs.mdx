@@ -124,7 +124,7 @@ BYUL_API_KEY=your_api_key node app.js
 const { io } = require('socket.io-client');
 
 const socket = io('wss://api.byul.ai/news-v2', {
-  auth: { apiKey: byul_v2_your_api_key }
+  auth: { apiKey: 'byul_api_key' }
 });
 
 const portfolio = ['AAPL', 'GOOGL', 'MSFT'];

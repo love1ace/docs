@@ -48,21 +48,38 @@
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "REST API",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Getting Started", 
             "pages": [
-              "api-reference/introduction"
+              "rest-api/quickstart",
+              "rest-api/overview", 
+              "rest-api/authentication"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "News",
             "pages": [
               "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "rest-api/news/data-format",
+              "rest-api/news/filtering"
+            ]
+          },
+          {
+            "group": "Error Handling",
+            "pages": [
+              "rest-api/error-handling"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "rest-api/examples/curl",
+              "rest-api/examples/nodejs",
+              "rest-api/examples/python",
+              "rest-api/examples/php",
+              "rest-api/examples/react"
             ]
           }
         ]
@@ -103,8 +120,10 @@
           {
             "group": "Examples",
             "pages": [
+              "websocket/examples/curl",
               "websocket/examples/nodejs",
               "websocket/examples/python",
+              "websocket/examples/php",
               "websocket/examples/react"
             ]
           }

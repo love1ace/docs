@@ -1,94 +1,196 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
-    "license": {
-      "name": "MIT"
+    "title": "Byul AI News API v2",
+    "description": "Real-time financial news API providing global economic news and market updates",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Byul Support",
+      "url": "https://www.byul.ai/contact"
     },
-    "version": "1.0.0"
+    "license": {
+      "name": "Proprietary",
+      "url": "https://www.byul.ai/terms"
+    }
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
+      "url": "https://api.byul.ai/api/v2",
+      "description": "Production server"
     }
   ],
   "security": [
     {
-      "bearerAuth": []
+      "ApiKeyAuth": []
     }
   ],
   "paths": {
-    "/plants": {
+    "/news": {
       "get": {
-        "description": "Returns all plants from the system that the user has access to",
+        "summary": "Fetch News",
+        "description": "Retrieve the latest financial news articles with filtering and pagination support",
+        "operationId": "fetchNews",
         "parameters": [
           {
             "name": "limit",
             "in": "query",
-            "description": "The maximum number of results to return",
+            "description": "Number of articles to return",
+            "required": false,
             "schema": {
               "type": "integer",
-              "format": "int32"
-            }
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "example": 20
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Pagination cursor for next page",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "67850d7b0123456789abcde0"
+          },
+          {
+            "name": "sinceId",
+            "in": "query",
+            "description": "Fetch articles after this ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "67850d7b0123456789abcdef"
+          },
+          {
+            "name": "minImportance",
+            "in": "query",
+            "description": "Minimum importance level",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 1
+            },
+            "example": 5
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query for filtering articles",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tesla earnings"
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Stock symbol filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "AAPL"
           }
         ],
         "responses": {
           "200": {
-            "description": "Plant response",
+            "description": "Successfully retrieved news articles",
+            "headers": {
+              "X-V2-RateLimit-Limit": {
+                "description": "Request limit per minute",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-V2-RateLimit-Remaining": {
+                "description": "Requests remaining in current window",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-V2-RateLimit-Used": {
+                "description": "Requests used in current window",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-V2-RateLimit-Reset": {
+                "description": "Unix timestamp when rate limit resets",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
-                  }
+                  "$ref": "#/components/schemas/NewsResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Unexpected error",
+            "description": "Bad Request - Invalid parameters",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "description": "Creates a new plant in the store",
-        "requestBody": {
-          "description": "Plant to add to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "plant response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plant"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "unexpected error",
+          "401": {
+            "description": "Unauthorized - API key required or invalid",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required - Plan expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Feature not available on current plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -96,121 +198,152 @@
         }
       }
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
-          },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
-      "post": {
-        "description": "Information about a new plant added to the store",
-        "requestBody": {
-          "description": "Plant added to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
-          }
-        }
-      }
-    }
   },
   "components": {
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "NewsResponse": {
         "type": "object",
+        "required": ["items", "hasMore"],
         "properties": {
-          "name": {
-            "description": "The name of the plant",
-            "type": "string"
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewsArticle"
+            },
+            "description": "Array of news articles"
           },
-          "tag": {
-            "description": "Tag to specify the type",
-            "type": "string"
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cursor for next page (only when hasMore is true, can be null)",
+            "example": "67850d7b0123456789abcde0"
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether additional pages are available",
+            "example": true
           }
         }
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
-          },
-          {
-            "required": [
-              "id"
-            ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
-              }
-            }
-          }
-        ]
-      },
-      "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
+      "NewsArticle": {
         "type": "object",
+        "required": ["_id", "title", "url", "date", "createdAt", "source", "timestamp", "importanceScore", "category"],
         "properties": {
-          "error": {
+          "_id": {
+            "type": "string",
+            "description": "Unique article ID",
+            "example": "67850d7b0123456789abcdef"
+          },
+          "title": {
+            "type": "string",
+            "description": "Article title (primary, usually English)",
+            "example": "Tesla Stock Surges After Q4 Earnings Beat"
+          },
+          "englishTitle": {
+            "type": "string",
+            "description": "English title (optional, may be same as title)",
+            "example": "Tesla Stock Surges After Q4 Earnings Beat"
+          },
+          "koTitle": {
+            "type": "string",
+            "description": "Korean title (optional)",
+            "example": "테슬라 4분기 실적 발표 후 주가 급등"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Original article URL",
+            "example": "https://www.byul.ai/news/tesla-earnings-q4-2024"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Article date (ISO 8601 format)",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation time (ISO 8601 format)",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "source": {
+            "type": "string",
+            "description": "News source name (always 'byul.ai')",
+            "example": "byul.ai"
+          },
+          "timestamp": {
             "type": "integer",
-            "format": "int32"
+            "description": "Unix timestamp",
+            "example": 1705401000
+          },
+          "importanceScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Market importance (0-10, higher = more important)",
+            "example": 8
+          },
+          "category": {
+            "type": "string",
+            "description": "News category",
+            "example": "earnings"
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Related stock symbols array (optional)",
+            "example": ["TSLA"]
+          },
+          "sentiment": {
+            "type": "string",
+            "enum": ["positive", "negative", "neutral"],
+            "description": "Sentiment analysis result (optional)",
+            "example": "positive"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["statusCode", "message", "error", "timestamp", "path"],
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "example": 401
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Error message",
+            "example": "API key is required. Please provide a valid V2 API key in the X-API-Key header."
+          },
+          "error": {
+            "type": "string",
+            "description": "Error type",
+            "example": "Unauthorized"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Error timestamp",
+            "example": "2024-01-15T10:30:00.123Z"
+          },
+          "path": {
+            "type": "string",
+            "description": "API endpoint path",
+            "example": "/api/v2/news"
           }
         }
       }
     },
     "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key authentication. Get your API key from https://www.byul.ai/api/dashboard"
       }
     }
   }
