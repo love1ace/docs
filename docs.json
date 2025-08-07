@@ -107,7 +107,7 @@
         },
         {
           "anchor": "Status",
-          "href": "https://www.byul.ai/status",
+          "href": "https://www.byul.ai/api/status",
           "icon": "chart-line"
         },
         {
