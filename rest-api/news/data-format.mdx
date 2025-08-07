@@ -1,0 +1,293 @@
+---
+title: "Data Format"
+description: "News article data structure and field descriptions"
+---
+
+## Response Structure
+
+The REST API returns news data in a paginated format with the following structure:
+
+```json
+{
+  "items": [
+    // Array of news articles
+  ],
+  "nextCursor": "67850d7b0123456789abcde0",
+  "hasMore": true
+}
+```
+
+### Top-Level Fields
+
+**`items`** (array)  
+Array of news article objects
+
+**`nextCursor`** (string, nullable)  
+Pagination cursor for the next page. Only present when `hasMore` is `true`
+
+**`hasMore`** (boolean)  
+Whether additional pages are available
+
+## Example API Calls
+
+### Get Recent News Articles
+
+Get the latest 5 articles to see the data format:
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=5" \
+  -H "X-API-Key: byul_api_key"
+```
+
+### Get High-Quality Articles Only
+
+Filter for articles with importance score 7+ to see richer data:
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=3&minImportance=7" \
+  -H "X-API-Key: byul_api_key"
+```
+
+### Test Pagination
+
+Get first page, then use cursor for next page:
+```bash
+# First page
+curl -X GET "https://api.byul.ai/api/v2/news?limit=2" \
+  -H "X-API-Key: byul_api_key"
+
+# Next page (use nextCursor from response)
+curl -X GET "https://api.byul.ai/api/v2/news?limit=2&cursor=YOUR_CURSOR_HERE" \
+  -H "X-API-Key: byul_api_key"
+```
+
+## News Article Structure
+
+Each article in the `items` array follows this structure based on the official API:
+
+```json
+{
+  "_id": "67850d7b0123456789abcdef",
+  "title": "Tesla Stock Surges After Q4 Earnings Beat",
+  "englishTitle": "Tesla Stock Surges After Q4 Earnings Beat",
+  "koTitle": "테슬라 4분기 실적 발표 후 주가 급등",
+  "url": "https://www.byul.ai/news/tesla-earnings-q4-2024",
+  "date": "2024-01-15T10:30:00.000Z",
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "source": "byul.ai",
+  "timestamp": 1705401000,
+  "importanceScore": 8,
+  "category": "earnings",
+  "symbols": ["TSLA"],
+  "sentiment": "positive"
+}
+```
+
+## Field Descriptions
+
+### Core Identifiers
+
+**`_id`** (string, required)  
+Unique article identifier. Use this for deduplication and referencing.
+
+**`title`** (string, required)  
+Primary article headline, usually in English
+
+**`englishTitle`** (string, optional)  
+English version of the title. May be identical to `title`
+
+**`koTitle`** (string, optional)  
+Korean translation of the title
+
+### Content & Source
+
+**`url`** (string, required)  
+Link to the original article on byul.ai
+
+**`source`** (string, required)  
+News source identifier. Always returns `"byul.ai"`
+
+### Timestamps
+
+**`date`** (string, required)  
+Article publication date in ISO 8601 format (UTC)
+
+**`createdAt`** (string, required)  
+When the article was created in our system (ISO 8601 UTC)
+
+**`timestamp`** (integer, required)  
+Unix timestamp of the article date
+
+### Market Data
+
+**`importanceScore`** (integer, required)  
+Market importance score from 0-10, where:
+- **0-3**: Low impact
+- **4-6**: Medium impact  
+- **7-8**: High impact
+- **9-10**: Breaking news / Major market events
+
+**`category`** (string, required)  
+News category classification:
+- `"earnings"` - Earnings reports and financial results
+- `"fed"` - Federal Reserve and central bank news
+- `"global"` - General economic and market news
+- `"crypto"` - Cryptocurrency and blockchain news
+- `"markets"` - Stock market and trading news
+
+**`symbols`** (array of strings, optional)  
+Related stock symbols. May be empty array `[]` for general news.
+
+**`sentiment`** (string, optional)  
+Sentiment analysis result:
+- `"positive"` - Bullish/positive market impact
+- `"negative"` - Bearish/negative market impact  
+- `"neutral"` - No clear directional impact
+
+## Data Types and Validation
+
+### Field Types
+
+| Field | Type | Required | Format | Validation |
+|-------|------|----------|--------|------------|
+| `_id` | string | Yes | MongoDB ObjectId | 24 hex characters |
+| `title` | string | Yes | Text | Max 500 characters |
+| `englishTitle` | string | No | Text | Max 500 characters |
+| `koTitle` | string | No | Text | Max 500 characters |
+| `url` | string | Yes | URL | Valid HTTPS URL |
+| `date` | string | Yes | ISO 8601 | UTC timezone |
+| `createdAt` | string | Yes | ISO 8601 | UTC timezone |
+| `source` | string | Yes | Text | Always "byul.ai" |
+| `timestamp` | integer | Yes | Unix timestamp | Positive integer |
+| `importanceScore` | integer | Yes | Number | 0-10 range |
+| `category` | string | Yes | Enum | See categories above |
+| `symbols` | array | No | String array | Stock symbols |
+| `sentiment` | string | No | Enum | positive/negative/neutral |
+
+### Example Validation
+
+```javascript
+const validateArticle = (article) => {
+  // Required fields
+  if (!article._id || typeof article._id !== 'string') {
+    throw new Error('Invalid _id');
+  }
+  
+  // Importance score validation
+  if (!Number.isInteger(article.importanceScore) || 
+      article.importanceScore < 0 || 
+      article.importanceScore > 10) {
+    throw new Error('importanceScore must be integer 0-10');
+  }
+  
+  // Date validation
+  if (!article.date || isNaN(new Date(article.date).getTime())) {
+    throw new Error('Invalid date format');
+  }
+  
+  // Sentiment validation (if present)
+  if (article.sentiment && 
+      !['positive', 'negative', 'neutral'].includes(article.sentiment)) {
+    throw new Error('Invalid sentiment value');
+  }
+  
+  return true;
+};
+```
+
+## Working with the Data
+
+### Extracting Key Information
+
+```javascript
+const processNews = (response) => {
+  return response.items.map(article => ({
+    id: article._id,
+    headline: article.title,
+    publishedAt: new Date(article.date),
+    importance: article.importanceScore,
+    isBreaking: article.importanceScore >= 9,
+    affectedStocks: article.symbols || [],
+    marketSentiment: article.sentiment,
+    readMoreUrl: article.url
+  }));
+};
+```
+
+### Filtering High-Impact News
+
+```javascript
+const getHighImpactNews = (response) => {
+  return response.items.filter(article => 
+    article.importanceScore >= 7
+  );
+};
+```
+
+### Grouping by Category
+
+```javascript
+const groupByCategory = (response) => {
+  return response.items.reduce((groups, article) => {
+    const category = article.category;
+    groups[category] = groups[category] || [];
+    groups[category].push(article);
+    return groups;
+  }, {});
+};
+```
+
+### Symbol-Specific News
+
+```javascript
+const getSymbolNews = (response, targetSymbol) => {
+  return response.items.filter(article => 
+    article.symbols && 
+    article.symbols.includes(targetSymbol)
+  );
+};
+```
+
+## Pagination Handling
+
+```javascript
+const getAllNews = async (filters = {}) => {
+  let allArticles = [];
+  let cursor = null;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const params = new URLSearchParams({
+      limit: '100',
+      ...filters,
+      ...(cursor && { cursor })
+    });
+    
+    const response = await fetch(`https://api.byul.ai/api/v2/news?${params}`, {
+      headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+    });
+    
+    const data = await response.json();
+    allArticles.push(...data.items);
+    
+    cursor = data.nextCursor;
+    hasMore = data.hasMore;
+    
+    // Prevent infinite loops
+    if (allArticles.length > 10000) break;
+  }
+  
+  return allArticles;
+};
+```
+
+## Data Consistency
+
+The news article structure is identical between REST API and WebSocket responses, ensuring consistent data handling across both interfaces.
+
+**Key consistency points:**
+- Field names and types are identical
+- `importanceScore` is always an integer (0-10)
+- `sentiment` is always a string enum
+- Timestamp formats are consistent (ISO 8601 for dates, Unix for timestamp)
+- Symbol arrays use same format
+
+This allows you to use the same data processing functions for both REST and WebSocket data sources.

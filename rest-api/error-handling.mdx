@@ -1,0 +1,601 @@
+---
+title: "Error Handling"
+description: "Handle API errors, rate limits, and implement retry logic"
+---
+
+## Error Response Format
+
+All API errors follow a consistent JSON format:
+
+```json
+{
+  "statusCode": 401,
+  "message": "API key is required. Please provide a valid V2 API key in the X-API-Key header.",
+  "error": "Unauthorized", 
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+### Error Fields
+
+**`statusCode`** (integer)  
+HTTP status code (400, 401, 403, 429, 500, etc.)
+
+**`message`** (string)  
+Human-readable error description
+
+**`error`** (string)  
+Error category/type
+
+**`timestamp`** (string)  
+When the error occurred (ISO 8601 UTC)
+
+**`path`** (string)  
+API endpoint that generated the error
+
+## HTTP Status Codes
+
+### 400 Bad Request
+
+Invalid request parameters or malformed request.
+
+```json
+{
+  "statusCode": 400,
+  "message": "Limit must be between 1 and 100",
+  "error": "Bad Request",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Common causes:**
+- `limit` parameter outside 1-100 range
+- `minImportance` parameter outside 1-10 range
+- Invalid cursor format
+- Malformed query parameters
+
+**Solution:**
+```javascript
+const validateParams = (params) => {
+  if (params.limit && (params.limit < 1 || params.limit > 100)) {
+    throw new Error('limit must be between 1 and 100');
+  }
+  if (params.minImportance && (params.minImportance < 1 || params.minImportance > 10)) {
+    throw new Error('minImportance must be between 1 and 10');
+  }
+};
+```
+
+### 401 Unauthorized
+
+Missing or invalid API key.
+
+```json
+{
+  "statusCode": 401,
+  "message": "API key is required. Please provide a valid V2 API key in the X-API-Key header.",
+  "error": "Unauthorized",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Common causes:**
+- Missing `X-API-Key` header
+- Invalid API key format (doesn't start with `byul_v2_`)
+- Expired or revoked API key
+
+**Solution:**
+```javascript
+const makeAuthenticatedRequest = async (endpoint, params = {}) => {
+  const apiKey = process.env.BYUL_API_KEY;
+  
+  if (!apiKey || !apiKey.startsWith('byul_v2_')) {
+    throw new Error('Invalid API key format. Must start with byul_v2_');
+  }
+  
+  const response = await fetch(`https://api.byul.ai/api/v2${endpoint}`, {
+    headers: { 'X-API-Key': apiKey }
+  });
+  
+  if (response.status === 401) {
+    throw new Error('Authentication failed. Check your API key.');
+  }
+  
+  return response;
+};
+```
+
+### 402 Payment Required
+
+Plan expired or payment issue.
+
+```json
+{
+  "statusCode": 402,
+  "message": "Plan expired",
+  "error": "Payment Required",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Solutions:**
+- Update payment method in [dashboard](https://www.byul.ai/api/dashboard)
+- Upgrade to a paid plan
+- Contact support for billing issues
+
+### 403 Forbidden
+
+Feature not available on current plan.
+
+```json
+{
+  "statusCode": 403,
+  "message": "Feature not available on current plan",
+  "error": "Forbidden",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Solutions:**
+- Upgrade to Pro or Enterprise plan
+- Check [pricing page](https://www.byul.ai/api/pricing) for feature availability
+
+### 429 Too Many Requests
+
+Rate limit exceeded.
+
+```json
+{
+  "statusCode": 429,
+  "message": "Too many requests",
+  "error": "Too Many Requests",
+  "timestamp": "2024-01-15T10:30:00.123Z", 
+  "path": "/api/v2/news"
+}
+```
+
+**Rate limits by plan:**
+- Test: 30 requests/minute
+- Starter: 60 requests/minute
+- Pro/Enterprise: 120 requests/minute
+
+**Headers included:**
+```
+X-V2-RateLimit-Limit: 120
+X-V2-RateLimit-Remaining: 0  
+X-V2-RateLimit-Used: 120
+X-V2-RateLimit-Reset: 1704628800
+```
+
+### 500 Internal Server Error
+
+Server-side error.
+
+```json
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "error": "Internal Server Error",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Solutions:**
+- Check [status page](https://www.byul.ai/status)
+- Retry with exponential backoff
+- Contact support if persistent
+
+## Testing Error Scenarios
+
+### Test Authentication Errors
+
+Test missing API key (401 error):
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news"
+```
+
+Test invalid API key (401 error):
+```bash  
+curl -X GET "https://api.byul.ai/api/v2/news" \
+  -H "X-API-Key: invalid_key"
+```
+
+### Test Bad Request Errors
+
+Test invalid limit parameter (400 error):
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=999" \
+  -H "X-API-Key: byul_api_key"
+```
+
+Test invalid importance score (400 error):
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?minImportance=99" \
+  -H "X-API-Key: byul_api_key"
+```
+
+### Test Rate Limits
+
+Test rapid requests to trigger 429 error:
+```bash
+# Send multiple requests quickly
+for i in {1..10}; do
+  curl -X GET "https://api.byul.ai/api/v2/news" \
+    -H "X-API-Key: byul_api_key" &
+done
+wait
+```
+
+### Check Rate Limit Headers
+
+View current rate limit status:
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+  -H "X-API-Key: byul_api_key" \
+  -I  # Include response headers
+```
+
+## Retry Logic
+
+### Exponential Backoff
+
+Implement retry logic with exponential backoff for temporary failures:
+
+```javascript
+const exponentialBackoff = async (
+  fn, 
+  maxRetries = 3, 
+  baseDelay = 1000
+) => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isRetryable = [429, 500, 502, 503, 504].includes(error.status);
+      
+      if (!isRetryable || attempt === maxRetries - 1) {
+        throw error;
+      }
+      
+      const delay = baseDelay * Math.pow(2, attempt);
+      const jitter = Math.random() * 1000; // Add jitter to prevent thundering herd
+      
+      console.log(`Retry attempt ${attempt + 1} after ${delay + jitter}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay + jitter));
+    }
+  }
+};
+
+// Usage
+const getNewsWithRetry = async () => {
+  return exponentialBackoff(async () => {
+    const response = await fetch('https://api.byul.ai/api/v2/news', {
+      headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+    });
+    
+    if (!response.ok) {
+      const error = new Error(`HTTP ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    
+    return response.json();
+  });
+};
+```
+
+### Rate Limit Handling
+
+Handle rate limits gracefully:
+
+```javascript
+const makeRateLimitAwareRequest = async (endpoint, params = {}) => {
+  const response = await fetch(`https://api.byul.ai/api/v2${endpoint}`, {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  
+  // Check rate limit headers
+  const rateLimit = {
+    limit: parseInt(response.headers.get('X-V2-RateLimit-Limit')),
+    remaining: parseInt(response.headers.get('X-V2-RateLimit-Remaining')),
+    used: parseInt(response.headers.get('X-V2-RateLimit-Used')),
+    reset: parseInt(response.headers.get('X-V2-RateLimit-Reset'))
+  };
+  
+  if (response.status === 429) {
+    const resetTime = new Date(rateLimit.reset * 1000);
+    const waitTime = resetTime - new Date();
+    
+    console.log(`Rate limited. Waiting ${waitTime}ms until ${resetTime}`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+    
+    // Retry the request
+    return makeRateLimitAwareRequest(endpoint, params);
+  }
+  
+  // Warn when approaching rate limit
+  if (rateLimit.remaining < 10) {
+    console.warn(`Low rate limit remaining: ${rateLimit.remaining}/${rateLimit.limit}`);
+  }
+  
+  return response.json();
+};
+```
+
+## Error Handling Patterns
+
+### Comprehensive Error Handler
+
+```javascript
+class ByulAPIError extends Error {
+  constructor(statusCode, message, error, path) {
+    super(message);
+    this.name = 'ByulAPIError';
+    this.statusCode = statusCode;
+    this.error = error;
+    this.path = path;
+  }
+}
+
+const handleApiResponse = async (response) => {
+  if (response.ok) {
+    return response.json();
+  }
+  
+  const errorData = await response.json().catch(() => ({}));
+  
+  throw new ByulAPIError(
+    response.status,
+    errorData.message || `HTTP ${response.status}`,
+    errorData.error || 'Unknown Error',
+    errorData.path || response.url
+  );
+};
+
+const safeApiCall = async (endpoint, options = {}) => {
+  try {
+    const response = await fetch(`https://api.byul.ai/api/v2${endpoint}`, {
+      ...options,
+      headers: {
+        'X-API-Key': process.env.BYUL_API_KEY,
+        ...options.headers
+      }
+    });
+    
+    return await handleApiResponse(response);
+  } catch (error) {
+    if (error instanceof ByulAPIError) {
+      switch (error.statusCode) {
+        case 400:
+          console.error('Bad Request:', error.message);
+          break;
+        case 401:
+          console.error('Authentication failed:', error.message);
+          break;
+        case 402:
+          console.error('Payment required:', error.message);
+          break;
+        case 403:
+          console.error('Forbidden:', error.message);
+          break;
+        case 429:
+          console.error('Rate limited:', error.message);
+          break;
+        case 500:
+          console.error('Server error:', error.message);
+          break;
+        default:
+          console.error('API error:', error.message);
+      }
+    }
+    throw error;
+  }
+};
+```
+
+### Circuit Breaker Pattern
+
+Implement circuit breaker to handle persistent failures:
+
+```javascript
+class CircuitBreaker {
+  constructor(threshold = 5, timeout = 60000) {
+    this.threshold = threshold;
+    this.timeout = timeout;
+    this.failureCount = 0;
+    this.lastFailTime = null;
+    this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+  }
+  
+  async call(fn) {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailTime > this.timeout) {
+        this.state = 'HALF_OPEN';
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+    
+    try {
+      const result = await fn();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+  
+  onSuccess() {
+    this.failureCount = 0;
+    this.state = 'CLOSED';
+  }
+  
+  onFailure() {
+    this.failureCount++;
+    this.lastFailTime = Date.now();
+    
+    if (this.failureCount >= this.threshold) {
+      this.state = 'OPEN';
+    }
+  }
+}
+
+const apiCircuitBreaker = new CircuitBreaker();
+
+const resilientApiCall = async (endpoint) => {
+  return apiCircuitBreaker.call(async () => {
+    return safeApiCall(endpoint);
+  });
+};
+```
+
+## Monitoring and Alerting
+
+### Health Check Implementation
+
+```javascript
+const healthCheck = async () => {
+  try {
+    const response = await fetch('https://api.byul.ai/api/v2/news/health');
+    const data = await response.json();
+    
+    if (data.status === 'healthy' && data.hasData) {
+      return { healthy: true, message: 'API is operational' };
+    } else {
+      return { healthy: false, message: 'API reports unhealthy status' };
+    }
+  } catch (error) {
+    return { healthy: false, message: `Health check failed: ${error.message}` };
+  }
+};
+
+// Run health checks periodically
+setInterval(async () => {
+  const health = await healthCheck();
+  if (!health.healthy) {
+    console.error('API Health Alert:', health.message);
+    // Send alert to monitoring system
+  }
+}, 60000); // Check every minute
+```
+
+### Request Logging
+
+```javascript
+const loggedApiCall = async (endpoint, params = {}) => {
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substr(2, 9);
+  
+  console.log(`[${requestId}] API Request: ${endpoint}`, params);
+  
+  try {
+    const result = await safeApiCall(endpoint, params);
+    const duration = Date.now() - startTime;
+    
+    console.log(`[${requestId}] API Success: ${duration}ms`, {
+      itemCount: result.items?.length,
+      hasMore: result.hasMore
+    });
+    
+    return result;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    console.error(`[${requestId}] API Error: ${duration}ms`, {
+      status: error.statusCode,
+      message: error.message
+    });
+    
+    throw error;
+  }
+};
+```
+
+## Error Recovery Strategies
+
+### Graceful Degradation
+
+```javascript
+const getNewsWithFallback = async (filters = {}) => {
+  try {
+    // Try primary endpoint
+    return await safeApiCall('/news', { method: 'GET' });
+  } catch (error) {
+    if (error.statusCode >= 500) {
+      // Server error - try health check endpoint as fallback
+      console.warn('Primary endpoint failed, checking service health');
+      
+      const health = await healthCheck();
+      if (!health.healthy) {
+        // Return cached data or empty state
+        return { items: [], hasMore: false, error: 'Service temporarily unavailable' };
+      }
+    }
+    
+    throw error;
+  }
+};
+```
+
+### Data Caching
+
+```javascript
+class NewsCache {
+  constructor(ttlMs = 300000) { // 5 minute TTL
+    this.cache = new Map();
+    this.ttl = ttlMs;
+  }
+  
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    
+    if (Date.now() - item.timestamp > this.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return item.data;
+  }
+  
+  set(key, data) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+}
+
+const newsCache = new NewsCache();
+
+const getCachedNews = async (filters = {}) => {
+  const cacheKey = JSON.stringify(filters);
+  const cached = newsCache.get(cacheKey);
+  
+  if (cached) {
+    console.log('Returning cached data');
+    return cached;
+  }
+  
+  try {
+    const data = await safeApiCall('/news');
+    newsCache.set(cacheKey, data);
+    return data;
+  } catch (error) {
+    // Return stale cache if available during errors
+    const stale = newsCache.cache.get(cacheKey);
+    if (stale) {
+      console.warn('Returning stale cached data due to API error');
+      return stale.data;
+    }
+    throw error;
+  }
+};
+```

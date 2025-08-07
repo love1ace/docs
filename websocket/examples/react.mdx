@@ -4,7 +4,13 @@ description: "Simple React examples for WebSocket news integration"
 icon: "react"
 ---
 
-## Basic Hook
+Build real-time financial applications in React using WebSocket connections. Perfect for trading dashboards, portfolio trackers, and real-time news feeds that require instant market updates.
+
+<Warning>
+**WebSocket Requirement**: WebSocket streaming requires **Pro Plan** ($99/month) or **Enterprise Plan**. [Upgrade here](https://www.byul.ai/api/pricing).
+</Warning>
+
+## Basic Connection
 
 ```jsx
 import { useState, useEffect } from 'react';
@@ -58,7 +64,74 @@ function NewsApp() {
 }
 ```
 
-## News Dashboard
+## React Integration
+
+### Context Provider for Global State
+
+```jsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+const NewsContext = createContext();
+
+export function NewsProvider({ children }) {
+  const [news, setNews] = useState([]);
+  const [connected, setConnected] = useState(false);
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    const newSocket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
+    });
+
+    newSocket.on('connect', () => {
+      setConnected(true);
+      newSocket.emit('news:subscribe', { minImportance: 6 });
+    });
+
+    newSocket.on('disconnect', () => {
+      setConnected(false);
+    });
+
+    newSocket.on('news:data', (response) => {
+      const newsItems = response.data.news;
+      setNews(prev => [...newsItems, ...prev].slice(0, 100));
+    });
+
+    setSocket(newSocket);
+    return () => newSocket.close();
+  }, []);
+
+  const subscribeToSymbol = (symbol) => {
+    if (socket && connected) {
+      socket.emit('news:subscribe', { symbol, minImportance: 6 });
+    }
+  };
+
+  const unsubscribeFromSymbol = (symbol) => {
+    if (socket && connected) {
+      socket.emit('news:unsubscribe', { symbol });
+    }
+  };
+
+  return (
+    <NewsContext.Provider value={{
+      news,
+      connected,
+      subscribeToSymbol,
+      unsubscribeFromSymbol
+    }}>
+      {children}
+    </NewsContext.Provider>
+  );
+}
+
+export const useNews = () => useContext(NewsContext);
+```
+
+## Advanced Examples
+
+### Real-time News Dashboard
 
 ```jsx
 import React, { useState, useEffect } from 'react';
@@ -170,7 +243,7 @@ function NewsDashboard() {
 export default NewsDashboard;
 ```
 
-## Portfolio Tracker
+### Portfolio Tracker
 
 ```jsx
 import React, { useState, useEffect } from 'react';
@@ -311,20 +384,10 @@ function PortfolioTracker() {
 export default PortfolioTracker;
 ```
 
-## Environment Setup
+## Error Handling
 
-**Installation**
-```bash
-npm install socket.io-client
-```
+### Error Handling Hook
 
-**Environment Variables**
-Create `.env` file:
-```env
-REACT_APP_BYUL_API_KEY=byul_v2_your_api_key
-```
-
-**Error Handling Hook**
 ```jsx
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
@@ -354,10 +417,6 @@ function useByulNewsWithErrors() {
       setStatus('error');
     });
 
-    socket.on('news:error', (err) => {
-      setError(`News error: ${err.message}`);
-    });
-
     socket.on('news:data', (response) => {
       const news = response.data.news;
       setNews(prev => [...news, ...prev].slice(0, 50));
@@ -369,3 +428,78 @@ function useByulNewsWithErrors() {
   return { news, status, error };
 }
 ```
+
+### Connection Status Component
+
+```jsx
+function ConnectionStatus({ status, error }) {
+  const getStatusColor = () => {
+    switch (status) {
+      case 'connected': return '#4caf50';
+      case 'error': return '#f44336';
+      default: return '#ff9800';
+    }
+  };
+
+  return (
+    <div style={{
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backgroundColor: getStatusColor(),
+      color: 'white',
+      fontSize: '14px',
+      fontWeight: 'bold'
+    }}>
+      {status === 'connected' && 'Connected'}
+      {status === 'disconnected' && 'Disconnected'}
+      {status === 'error' && `Error: ${error}`}
+    </div>
+  );
+}
+```
+
+## Environment Setup
+
+### Installation
+
+```bash
+npm install socket.io-client
+```
+
+### Environment Variables
+
+Create `.env` file:
+
+```env
+REACT_APP_BYUL_API_KEY=byul_api_key
+```
+
+### Production Configuration
+
+```jsx
+// config/websocket.js
+export const websocketConfig = {
+  url: process.env.REACT_APP_WEBSOCKET_URL || 'wss://api.byul.ai/news-v2',
+  apiKey: process.env.REACT_APP_BYUL_API_KEY,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 20000
+};
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Node.js Examples" href="/websocket/examples/nodejs">
+Event-driven WebSocket handling with Node.js
+</Card>
+<Card title="Python Examples" href="/websocket/examples/python">
+Async WebSocket clients with Python
+</Card>
+<Card title="Error Handling" href="/websocket/error-handling">
+Robust error handling and reconnection strategies
+</Card>
+<Card title="Authentication" href="/websocket/authentication">
+Secure WebSocket authentication methods
+</Card>
+</CardGroup>

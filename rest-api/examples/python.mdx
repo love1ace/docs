@@ -1,0 +1,612 @@
+---
+title: "Python"
+description: "Complete Python examples for REST API integration"
+icon: "python"
+---
+
+## Basic Usage
+
+### Simple News Fetch
+
+```python
+import requests
+import os
+from typing import Dict, List, Optional
+
+def get_news(limit: int = 10, min_importance: int = 7) -> Dict:
+    """Fetch news from Byul AI API"""
+    
+    response = requests.get(
+        'https://api.byul.ai/api/v2/news',
+        params={
+            'limit': limit,
+            'minImportance': min_importance
+        },
+        headers={
+            'X-API-Key': os.getenv('BYUL_API_KEY')
+        }
+    )
+    
+    response.raise_for_status()  # Raises HTTPError for bad status codes
+    
+    data = response.json()
+    
+    print(f"Retrieved {len(data['items'])} articles")
+    for article in data['items']:
+        print(f"{article['title']} - Importance: {article['importanceScore']}/10")
+    
+    return data
+
+# Usage
+if __name__ == "__main__":
+    news = get_news()
+```
+
+### With Error Handling
+
+```python
+import requests
+import os
+import logging
+from typing import Dict, Optional
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def safe_get_news(filters: Dict = None) -> Optional[Dict]:
+    """Safely fetch news with comprehensive error handling"""
+    
+    if filters is None:
+        filters = {}
+    
+    # Default parameters
+    params = {
+        'limit': 20,
+        'minImportance': 6,
+        **filters
+    }
+    
+    try:
+        response = requests.get(
+            'https://api.byul.ai/api/v2/news',
+            params=params,
+            headers={'X-API-Key': os.getenv('BYUL_API_KEY')},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            error_data = response.json()
+            logger.error(f"API Error {response.status_code}: {error_data.get('message')}")
+            return None
+            
+    except requests.exceptions.Timeout:
+        logger.error("Request timeout")
+        return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request failed: {e}")
+        return None
+
+# Usage
+news = safe_get_news({'symbol': 'AAPL'})
+if news:
+    print(f"Found {len(news['items'])} AAPL articles")
+```
+
+## Flask Integration
+
+### News API Server
+
+```python
+from flask import Flask, request, jsonify
+import requests
+import os
+from functools import wraps
+import time
+
+app = Flask(__name__)
+
+class RateLimiter:
+    def __init__(self):
+        self.requests = {}
+    
+    def is_allowed(self, key: str, limit: int = 100, window: int = 3600) -> bool:
+        now = time.time()
+        
+        if key not in self.requests:
+            self.requests[key] = []
+        
+        # Remove old requests outside the window
+        self.requests[key] = [req_time for req_time in self.requests[key] 
+                             if now - req_time < window]
+        
+        if len(self.requests[key]) < limit:
+            self.requests[key].append(now)
+            return True
+        
+        return False
+
+rate_limiter = RateLimiter()
+
+def rate_limit(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        client_ip = request.environ.get('REMOTE_ADDR')
+        
+        if not rate_limiter.is_allowed(client_ip):
+            return jsonify({'error': 'Rate limit exceeded'}), 429
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/api/news')
+@rate_limit
+def get_news_api():
+    """Proxy endpoint for Byul news API"""
+    
+    # Validate parameters
+    try:
+        limit = int(request.args.get('limit', 10))
+        min_importance = int(request.args.get('minImportance', 1))
+        
+        if not (1 <= limit <= 100):
+            return jsonify({'error': 'limit must be between 1 and 100'}), 400
+        
+        if not (1 <= min_importance <= 10):
+            return jsonify({'error': 'minImportance must be between 1 and 10'}), 400
+            
+    except ValueError:
+        return jsonify({'error': 'Invalid parameter format'}), 400
+    
+    # Build parameters
+    params = {'limit': limit, 'minImportance': min_importance}
+    
+    if request.args.get('symbol'):
+        params['symbol'] = request.args.get('symbol')
+    
+    if request.args.get('q'):
+        params['q'] = request.args.get('q')
+    
+    try:
+        response = requests.get(
+            'https://api.byul.ai/api/v2/news',
+            params=params,
+            headers={'X-API-Key': os.getenv('BYUL_API_KEY')},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify(response.json()), response.status_code
+            
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': 'External API error'}), 503
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    try:
+        response = requests.get(
+            'https://api.byul.ai/api/v2/news/health',
+            timeout=10
+        )
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({'status': 'unhealthy'}), 503
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+```
+
+## Advanced Examples
+
+### News Client Class
+
+```python
+import requests
+import os
+import time
+from typing import Dict, List, Optional, Generator
+from dataclasses import dataclass
+import logging
+
+@dataclass
+class NewsArticle:
+    id: str
+    title: str
+    url: str
+    date: str
+    importance_score: int
+    category: str
+    symbols: List[str]
+    sentiment: Optional[str] = None
+
+class ByulNewsClient:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://api.byul.ai/api/v2"
+        self.session = requests.Session()
+        self.session.headers.update({'X-API-Key': api_key})
+        
+        # Setup logging
+        self.logger = logging.getLogger(__name__)
+    
+    def _make_request(self, endpoint: str, params: Dict = None) -> Dict:
+        """Make API request with error handling"""
+        
+        url = f"{self.base_url}{endpoint}"
+        
+        try:
+            response = self.session.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        
+        except requests.exceptions.HTTPError as e:
+            error_data = response.json() if response.content else {}
+            raise Exception(f"API Error {response.status_code}: {error_data.get('message', str(e))}")
+    
+    def get_news(self, **filters) -> Dict:
+        """Get news with optional filters"""
+        return self._make_request('/news', filters)
+    
+    def get_health(self) -> Dict:
+        """Check API health"""
+        return self._make_request('/news/health')
+    
+    def get_all_news(self, **filters) -> List[Dict]:
+        """Get all available news with pagination"""
+        all_news = []
+        cursor = None
+        
+        while True:
+            params = {**filters, 'limit': 100}
+            if cursor:
+                params['cursor'] = cursor
+            
+            data = self.get_news(**params)
+            all_news.extend(data['items'])
+            
+            if not data.get('hasMore'):
+                break
+            
+            cursor = data.get('nextCursor')
+            
+            # Safety check
+            if len(all_news) > 10000:
+                self.logger.warning("Retrieved over 10k articles, stopping pagination")
+                break
+        
+        return all_news
+    
+    def get_portfolio_news(self, symbols: List[str], min_importance: int = 6) -> List[Dict]:
+        """Get news for multiple symbols"""
+        all_news = {}
+        
+        for symbol in symbols:
+            try:
+                data = self.get_news(symbol=symbol, minImportance=min_importance, limit=50)
+                for article in data['items']:
+                    all_news[article['_id']] = article
+            except Exception as e:
+                self.logger.error(f"Failed to fetch news for {symbol}: {e}")
+        
+        # Sort by importance
+        return sorted(all_news.values(), 
+                     key=lambda x: x['importanceScore'], 
+                     reverse=True)
+    
+    def stream_news(self, **filters) -> Generator[Dict, None, None]:
+        """Stream news articles as they become available"""
+        last_article_id = None
+        
+        while True:
+            try:
+                params = {**filters, 'limit': 50}
+                if last_article_id:
+                    params['sinceId'] = last_article_id
+                
+                data = self.get_news(**params)
+                
+                if data['items']:
+                    last_article_id = data['items'][0]['_id']
+                    for article in data['items']:
+                        yield article
+                
+                # Wait before next poll
+                time.sleep(30)
+                
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                self.logger.error(f"Streaming error: {e}")
+                time.sleep(60)  # Wait longer on errors
+
+# Usage examples
+client = ByulNewsClient(os.getenv('BYUL_API_KEY'))
+
+# Get breaking news
+breaking_news = client.get_news(minImportance=9)
+print(f"Breaking news: {len(breaking_news['items'])} articles")
+
+# Get portfolio news
+portfolio = client.get_portfolio_news(['AAPL', 'GOOGL', 'MSFT'])
+print(f"Portfolio news: {len(portfolio)} articles")
+
+# Stream news (run in separate thread/process)
+# for article in client.stream_news(minImportance=7):
+#     print(f"New article: {article['title']}")
+```
+
+### Data Analysis with Pandas
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime, timedelta
+
+class NewsAnalyzer:
+    def __init__(self, client: ByulNewsClient):
+        self.client = client
+    
+    def get_news_dataframe(self, days: int = 7, **filters) -> pd.DataFrame:
+        """Get news as pandas DataFrame"""
+        
+        # Get all news from the past week
+        news = self.client.get_all_news(**filters)
+        
+        # Filter by date
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(news)
+        df['date'] = pd.to_datetime(df['date'])
+        df = df[df['date'] >= cutoff_date]
+        
+        # Add derived columns
+        df['hour'] = df['date'].dt.hour
+        df['day_of_week'] = df['date'].dt.day_name()
+        df['has_symbols'] = df['symbols'].apply(lambda x: len(x) > 0 if x else False)
+        
+        return df
+    
+    def analyze_importance_distribution(self, df: pd.DataFrame) -> Dict:
+        """Analyze importance score distribution"""
+        
+        analysis = {
+            'mean_importance': df['importanceScore'].mean(),
+            'median_importance': df['importanceScore'].median(),
+            'breaking_news_count': len(df[df['importanceScore'] >= 9]),
+            'high_impact_count': len(df[df['importanceScore'] >= 7]),
+            'distribution': df['importanceScore'].value_counts().sort_index().to_dict()
+        }
+        
+        return analysis
+    
+    def analyze_by_category(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Analyze news by category"""
+        
+        return df.groupby('category').agg({
+            'importanceScore': ['count', 'mean', 'max'],
+            'sentiment': lambda x: x.value_counts().to_dict() if x.notna().any() else {}
+        }).round(2)
+    
+    def plot_news_timeline(self, df: pd.DataFrame, save_path: str = None):
+        """Plot news timeline"""
+        
+        plt.figure(figsize=(12, 6))
+        
+        # Group by hour and importance
+        hourly_data = df.groupby([df['date'].dt.floor('H'), 'importanceScore']).size().unstack(fill_value=0)
+        
+        # Plot stacked area chart
+        hourly_data.plot(kind='area', stacked=True, alpha=0.7, colormap='viridis')
+        
+        plt.title('News Volume by Hour and Importance Score')
+        plt.xlabel('Time')
+        plt.ylabel('Number of Articles')
+        plt.legend(title='Importance Score', bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        
+        if save_path:
+            plt.savefig(save_path)
+        plt.show()
+    
+    def find_trending_symbols(self, df: pd.DataFrame, min_mentions: int = 3) -> pd.DataFrame:
+        """Find trending stock symbols"""
+        
+        # Flatten symbols
+        symbol_rows = []
+        for _, row in df.iterrows():
+            if row['symbols']:
+                for symbol in row['symbols']:
+                    symbol_rows.append({
+                        'symbol': symbol,
+                        'importance': row['importanceScore'],
+                        'date': row['date'],
+                        'sentiment': row['sentiment']
+                    })
+        
+        if not symbol_rows:
+            return pd.DataFrame()
+        
+        symbol_df = pd.DataFrame(symbol_rows)
+        
+        # Analyze by symbol
+        trending = symbol_df.groupby('symbol').agg({
+            'importance': ['count', 'mean', 'max'],
+            'sentiment': lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else 'neutral'
+        }).round(2)
+        
+        # Filter by minimum mentions
+        trending = trending[trending[('importance', 'count')] >= min_mentions]
+        
+        # Sort by average importance
+        trending = trending.sort_values(('importance', 'mean'), ascending=False)
+        
+        return trending
+
+# Usage example
+analyzer = NewsAnalyzer(client)
+
+# Get news data for analysis
+df = analyzer.get_news_dataframe(days=7, minImportance=5)
+print(f"Analyzing {len(df)} articles from the past week")
+
+# Analyze importance distribution
+importance_analysis = analyzer.analyze_importance_distribution(df)
+print("Importance Analysis:", importance_analysis)
+
+# Analyze by category
+category_analysis = analyzer.analyze_by_category(df)
+print("Category Analysis:")
+print(category_analysis)
+
+# Find trending symbols
+trending = analyzer.find_trending_symbols(df)
+print("Trending Symbols:")
+print(trending.head(10))
+
+# Plot timeline
+# analyzer.plot_news_timeline(df, 'news_timeline.png')
+```
+
+## Environment Setup
+
+### requirements.txt
+
+```txt
+requests>=2.28.0
+flask>=2.2.0
+pandas>=1.5.0
+matplotlib>=3.6.0
+seaborn>=0.12.0
+python-dotenv>=0.19.0
+```
+
+### Installation and Setup
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variable
+export BYUL_API_KEY=byul_api_key
+
+# Run the application
+python app.py
+```
+
+### Using python-dotenv
+
+```python
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+api_key = os.getenv('BYUL_API_KEY')
+```
+
+Create `.env` file:
+```bash
+BYUL_API_KEY=byul_api_key
+FLASK_ENV=development
+DEBUG=True
+```
+
+## Testing
+
+### Unit Tests with pytest
+
+```python
+# test_byul_client.py
+import pytest
+import requests_mock
+from byul_client import ByulNewsClient
+
+@pytest.fixture
+def client():
+    return ByulNewsClient('test_api_key')
+
+@pytest.fixture
+def mock_news_response():
+    return {
+        'items': [
+            {
+                '_id': '123',
+                'title': 'Test News',
+                'importanceScore': 8,
+                'date': '2024-01-15T10:30:00.000Z',
+                'category': 'earnings',
+                'symbols': ['AAPL']
+            }
+        ],
+        'hasMore': False,
+        'nextCursor': None
+    }
+
+def test_get_news_success(client, mock_news_response):
+    with requests_mock.Mocker() as m:
+        m.get(
+            'https://api.byul.ai/api/v2/news',
+            json=mock_news_response
+        )
+        
+        result = client.get_news(limit=10)
+        
+        assert result == mock_news_response
+        assert len(result['items']) == 1
+        assert result['items'][0]['title'] == 'Test News'
+
+def test_get_news_api_error(client):
+    with requests_mock.Mocker() as m:
+        m.get(
+            'https://api.byul.ai/api/v2/news',
+            status_code=401,
+            json={'message': 'Unauthorized'}
+        )
+        
+        with pytest.raises(Exception, match='API Error 401: Unauthorized'):
+            client.get_news()
+
+def test_get_portfolio_news(client, mock_news_response):
+    with requests_mock.Mocker() as m:
+        # Mock multiple symbol requests
+        for symbol in ['AAPL', 'GOOGL']:
+            m.get(
+                f'https://api.byul.ai/api/v2/news?symbol={symbol}&minImportance=6&limit=50',
+                json=mock_news_response
+            )
+        
+        result = client.get_portfolio_news(['AAPL', 'GOOGL'])
+        
+        assert len(result) == 1  # Deduplicated
+        assert result[0]['_id'] == '123'
+```
+
+### Run Tests
+
+```bash
+# Install pytest
+pip install pytest pytest-mock requests-mock
+
+# Run tests
+pytest test_byul_client.py -v
+
+# Run with coverage
+pip install pytest-cov
+pytest test_byul_client.py --cov=byul_client --cov-report=html
+```

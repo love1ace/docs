@@ -1,0 +1,235 @@
+---
+title: "Authentication"
+description: "API key authentication and security best practices"
+---
+
+## API Key Authentication
+
+Byul REST API uses API key authentication. All requests must include a valid API key in the request headers.
+
+### Getting Your API Key
+
+1. **Sign up** at [byul.ai](https://www.byul.ai)
+2. **Login** to your [API Dashboard](https://www.byul.ai/api/dashboard)
+3. **Copy** your automatically generated API key
+
+<Info>
+Your API key starts with the `byul_` prefix and is immediately available after account creation.
+</Info>
+
+### Authentication Methods
+
+Include your API key using the `X-API-Key` header:
+
+```bash
+X-API-Key: byul_api_key
+```
+
+### Example Requests
+
+<Tabs>
+<Tab title="curl">
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news" \
+  -H "X-API-Key: byul_api_key"
+```
+</Tab>
+<Tab title="JavaScript">
+```javascript
+const response = await fetch('https://api.byul.ai/api/v2/news', {
+  headers: {
+    'X-API-Key': process.env.BYUL_API_KEY
+  }
+});
+```
+</Tab>
+<Tab title="Python">
+```python
+import requests
+
+response = requests.get(
+    'https://api.byul.ai/api/v2/news',
+    headers={'X-API-Key': os.getenv('BYUL_API_KEY')}
+)
+```
+</Tab>
+<Tab title="PHP">
+```php
+$response = file_get_contents('https://api.byul.ai/api/v2/news', false, 
+  stream_context_create([
+    'http' => [
+      'header' => 'X-API-Key: ' . getenv('BYUL_API_KEY')
+    ]
+  ])
+);
+```
+</Tab>
+</Tabs>
+
+## Security Best Practices
+
+### Environment Variables
+
+**Secure (Recommended)**
+```bash
+# Set environment variable
+export BYUL_API_KEY=byul_api_key
+
+# Use in your application
+const apiKey = process.env.BYUL_API_KEY;
+```
+
+**Insecure (Don't do this)**
+```javascript
+// Never hardcode API keys in source code
+const apiKey = 'byul_api_key';
+```
+
+### Client-Side Security
+
+<Warning>
+**Never expose API keys in client-side code**. API keys should only be used on your backend servers.
+</Warning>
+
+**Don't expose in browser**
+```javascript
+// This exposes your API key to all website visitors
+const apiKey = 'byul_api_key';
+fetch(`https://api.byul.ai/api/v2/news`, {
+  headers: { 'X-API-Key': apiKey }
+});
+```
+
+**Use a backend proxy instead**
+```javascript
+// Frontend makes request to your backend
+const response = await fetch('/api/news');
+
+// Backend handles API key authentication
+app.get('/api/news', async (req, res) => {
+  const response = await fetch('https://api.byul.ai/api/v2/news', {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  res.json(await response.json());
+});
+```
+
+### Key Management
+
+1. **Rotate Keys Regularly**: Generate new API keys periodically
+2. **Monitor Usage**: Check your dashboard for unusual activity
+3. **Restrict Access**: Use separate keys for different environments
+4. **Secure Storage**: Store keys in secure environment variables or key management systems
+
+### Development Environments
+
+Use different API keys for different environments:
+
+```bash
+# Development
+BYUL_API_KEY=byul_v2_dev_key_here
+
+# Production  
+BYUL_API_KEY=byul_v2_prod_key_here
+```
+
+## Authentication Errors
+
+### 401 Unauthorized
+
+```json
+{
+  "statusCode": 401,
+  "message": "API key is required. Please provide a valid V2 API key in the X-API-Key header.",
+  "error": "Unauthorized",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Common causes:**
+- Missing `X-API-Key` header
+- Invalid API key format
+- Expired or revoked API key
+
+### 403 Forbidden
+
+```json
+{
+  "statusCode": 403,
+  "message": "Feature not available on current plan",
+  "error": "Forbidden",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Common causes:**
+- Plan doesn't support the requested feature
+- Account suspended or payment overdue
+
+### 402 Payment Required
+
+```json
+{
+  "statusCode": 402,
+  "message": "Plan expired",
+  "error": "Payment Required",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+**Common causes:**
+- Plan expired
+- Payment method failed
+- Usage exceeded plan limits
+
+## Testing Authentication
+
+Use the health check endpoint to test your authentication:
+
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news/health" \
+  -H "X-API-Key: byul_api_key"
+```
+
+Success response:
+```json
+{
+  "status": "healthy",
+  "hasData": true
+}
+```
+
+## Plan-Based Access
+
+Different plans have different capabilities:
+
+| Plan | Rate Limit | Features |
+|------|------------|----------|
+| Test (Free) | 30 req/min | Basic news access |
+| Starter ($19) | 60 req/min | Basic news access |
+| Pro ($99) | 120 req/min | News + WebSocket access |
+| Enterprise | Custom | All features + custom development |
+
+<Info>
+Check your current plan and usage in the [API Dashboard](https://www.byul.ai/api/dashboard).
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Make Requests" href="/rest-api/requests">
+Learn about request structure and parameters
+</Card>
+<Card title="Handle Errors" href="/rest-api/error-handling">
+Implement proper error handling and retries
+</Card>
+<Card title="Rate Limits" href="/rest-api/rate-limits">
+Understand rate limiting and optimization
+</Card>
+<Card title="Upgrade Plan" href="https://www.byul.ai/api/pricing">
+Increase your rate limits and access WebSocket
+</Card>
+</CardGroup>

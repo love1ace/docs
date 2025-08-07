@@ -1,0 +1,332 @@
+---
+title: "Filtering"
+description: "Filter news by importance, symbols, search queries, and more"
+---
+
+## Query Parameters
+
+The `/news` endpoint supports multiple filtering options to help you get exactly the news you need.
+
+### Basic Filters
+
+**`limit`** (integer, optional)  
+Number of articles to return per request
+- **Range**: 1-100
+- **Default**: 10
+- **Example**: `?limit=50`
+
+**`minImportance`** (integer, optional)  
+Minimum importance score for articles
+- **Range**: 1-10  
+- **Default**: 1 (all articles)
+- **Example**: `?minImportance=7` (high-impact news only)
+
+### Search and Symbols
+
+**`q`** (string, optional)  
+Search query to filter articles by content
+- **Format**: Free text search
+- **Example**: `?q=tesla earnings`
+- **Behavior**: Searches title and content
+
+**`symbol`** (string, optional)  
+Filter articles related to specific stock symbol
+- **Format**: Stock symbol (e.g., "AAPL", "TSLA")
+- **Example**: `?symbol=AAPL`
+- **Behavior**: Returns articles where the symbol appears in the `symbols` array
+
+### Pagination
+
+**`cursor`** (string, optional)  
+Pagination cursor for retrieving next page
+- **Source**: Use `nextCursor` from previous response
+- **Example**: `?cursor=67850d7b0123456789abcde0`
+
+**`sinceId`** (string, optional)  
+Retrieve articles created after the specified article ID
+- **Format**: Article ID (_id field)
+- **Example**: `?sinceId=67850d7b0123456789abcdef`
+- **Use case**: Real-time polling for new articles
+
+## Filtering Examples
+
+### High-Impact News Only
+
+Get only breaking news and major market events:
+
+<Tabs>
+<Tab title="curl">
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?minImportance=9" \
+  -H "X-API-Key: byul_api_key"
+```
+</Tab>
+<Tab title="JavaScript">
+```javascript
+const getBreakingNews = async () => {
+  const response = await fetch('https://api.byul.ai/api/v2/news?minImportance=9', {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  
+  const data = await response.json();
+  console.log(`Breaking: ${data.items.length} major news events`);
+  return data.items;
+};
+```
+</Tab>
+<Tab title="Python">
+```python
+def get_breaking_news():
+    response = requests.get(
+        'https://api.byul.ai/api/v2/news',
+        params={'minImportance': 9},
+        headers={'X-API-Key': os.getenv('BYUL_API_KEY')}
+    )
+    
+    data = response.json()
+    print(f'Breaking: {len(data["items"])} major news events')
+    return data['items']
+```
+</Tab>
+</Tabs>
+
+### Symbol-Specific News
+
+Track news for specific stocks:
+
+```javascript
+const getTeslaNews = async () => {
+  const response = await fetch('https://api.byul.ai/api/v2/news?symbol=TSLA&limit=20', {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  
+  const data = await response.json();
+  return data.items;
+};
+```
+
+### Search Query Filtering
+
+Find articles about specific topics:
+
+```javascript
+const searchEarningsNews = async () => {
+  const response = await fetch('https://api.byul.ai/api/v2/news?q=earnings%20report&minImportance=5', {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  
+  const data = await response.json();
+  return data.items;
+};
+```
+
+### Combining Multiple Filters
+
+Get high-impact Apple news with search query:
+
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?symbol=AAPL&minImportance=7&q=earnings&limit=50" \
+  -H "X-API-Key: byul_api_key"
+```
+
+## Advanced Filtering Patterns
+
+### Portfolio Tracking
+
+Monitor news for multiple symbols:
+
+```javascript
+const getPortfolioNews = async (symbols) => {
+  const allNews = [];
+  
+  // Make parallel requests for each symbol
+  const promises = symbols.map(symbol =>
+    fetch(`https://api.byul.ai/api/v2/news?symbol=${symbol}&minImportance=6&limit=20`, {
+      headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+    }).then(res => res.json())
+  );
+  
+  const results = await Promise.all(promises);
+  
+  // Combine and deduplicate results
+  const newsMap = new Map();
+  results.forEach(data => {
+    data.items.forEach(article => {
+      newsMap.set(article._id, article);
+    });
+  });
+  
+  return Array.from(newsMap.values())
+    .sort((a, b) => b.importanceScore - a.importanceScore);
+};
+
+// Usage
+const portfolioNews = await getPortfolioNews(['AAPL', 'GOOGL', 'MSFT', 'TSLA']);
+```
+
+### Real-Time Polling
+
+Poll for new articles since last check:
+
+```javascript
+class NewsPoller {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.lastArticleId = null;
+  }
+  
+  async pollForNewNews() {
+    const params = new URLSearchParams({
+      limit: '50',
+      minImportance: '6'
+    });
+    
+    if (this.lastArticleId) {
+      params.append('sinceId', this.lastArticleId);
+    }
+    
+    const response = await fetch(`https://api.byul.ai/api/v2/news?${params}`, {
+      headers: { 'X-API-Key': this.apiKey }
+    });
+    
+    const data = await response.json();
+    
+    if (data.items.length > 0) {
+      this.lastArticleId = data.items[0]._id;
+      console.log(`🆕 Found ${data.items.length} new articles`);
+    }
+    
+    return data.items;
+  }
+  
+  startPolling(intervalMs = 30000) {
+    return setInterval(() => {
+      this.pollForNewNews();
+    }, intervalMs);
+  }
+}
+```
+
+### Importance-Based Filtering
+
+Create different news feeds based on importance:
+
+```javascript
+const createNewsFeeds = async () => {
+  const [breaking, important, general] = await Promise.all([
+    // Breaking news (9-10)
+    fetch('https://api.byul.ai/api/v2/news?minImportance=9&limit=10', {
+      headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+    }).then(res => res.json()),
+    
+    // Important news (7-8)  
+    fetch('https://api.byul.ai/api/v2/news?minImportance=7&limit=20', {
+      headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+    }).then(res => res.json()),
+    
+    // General news (4-6)
+    fetch('https://api.byul.ai/api/v2/news?minImportance=4&limit=30', {
+      headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+    }).then(res => res.json())
+  ]);
+  
+  return {
+    breaking: breaking.items,
+    important: important.items,
+    general: general.items
+  };
+};
+```
+
+## Filter Validation
+
+Always validate filter parameters to avoid API errors:
+
+```javascript
+const validateFilters = (filters) => {
+  const errors = [];
+  
+  if (filters.limit && (filters.limit < 1 || filters.limit > 100)) {
+    errors.push('limit must be between 1 and 100');
+  }
+  
+  if (filters.minImportance && (filters.minImportance < 1 || filters.minImportance > 10)) {
+    errors.push('minImportance must be between 1 and 10');
+  }
+  
+  if (filters.symbol && !/^[A-Z]{1,5}$/.test(filters.symbol)) {
+    errors.push('symbol must be 1-5 uppercase letters');
+  }
+  
+  if (filters.q && filters.q.length > 100) {
+    errors.push('search query too long (max 100 characters)');
+  }
+  
+  return errors;
+};
+
+const makeNewsRequest = async (filters) => {
+  const validationErrors = validateFilters(filters);
+  if (validationErrors.length > 0) {
+    throw new Error(`Invalid filters: ${validationErrors.join(', ')}`);
+  }
+  
+  const params = new URLSearchParams(filters);
+  const response = await fetch(`https://api.byul.ai/api/v2/news?${params}`, {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  
+  return response.json();
+};
+```
+
+## Best Practices
+
+### Efficient Filtering
+
+1. **Use appropriate limits**: Don't request more data than you need
+2. **Filter server-side**: Use API filters instead of client-side filtering
+3. **Combine filters**: Use multiple parameters to narrow results
+4. **Cache results**: Store filtered results to reduce API calls
+
+### Rate Limit Optimization
+
+```javascript
+// Good: Single request with filters
+const news = await fetch('https://api.byul.ai/api/v2/news?symbol=AAPL&minImportance=7');
+
+// Bad: Multiple requests + client filtering
+const allNews = await fetch('https://api.byul.ai/api/v2/news?limit=100');
+const filteredNews = allNews.items.filter(article => 
+  article.symbols?.includes('AAPL') && article.importanceScore >= 7
+);
+```
+
+### Error Handling
+
+```javascript
+const safeFilteredRequest = async (filters) => {
+  try {
+    const response = await makeNewsRequest(filters);
+    return response;
+  } catch (error) {
+    if (error.message.includes('Invalid filters')) {
+      console.error('Filter validation failed:', error.message);
+      // Return default request without filters
+      return makeNewsRequest({});
+    }
+    throw error;
+  }
+};
+```
+
+## Filter Combinations Reference
+
+| Use Case | Recommended Filters | Example |
+|----------|-------------------|---------|
+| Breaking News | `minImportance=9` | `?minImportance=9&limit=10` |
+| Stock Specific | `symbol=SYMBOL&minImportance=6` | `?symbol=AAPL&minImportance=6` |
+| Earnings Season | `q=earnings&minImportance=5` | `?q=earnings&minImportance=5` |
+| Fed News | `q=fed&minImportance=7` | `?q=fed&minImportance=7` |
+| Daily Digest | `minImportance=5&limit=50` | `?minImportance=5&limit=50` |
+| Real-time Updates | `sinceId=LAST_ID&minImportance=6` | `?sinceId=67850...&minImportance=6` |

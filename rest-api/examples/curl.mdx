@@ -1,0 +1,329 @@
+---
+title: "cURL"
+description: "Complete cURL examples for testing and integrating Byul REST API"
+icon: "terminal"
+---
+<Info>
+**Pro Tip**: cURL examples work on all platforms (Linux, macOS, Windows) and are perfect for testing API endpoints before implementing in your application.
+</Info>
+
+## Basic News Retrieval
+
+### Get Latest News
+
+Fetch the most recent financial news:
+
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=10" \
+  -H "X-API-Key: byul_api_key" \
+  -H "Content-Type: application/json"
+```
+
+### High-Importance News Only
+
+Get only market-moving news with importance score 8+:
+
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=5&minImportance=8" \
+  -H "X-API-Key: byul_api_key" \
+  -H "Content-Type: application/json"
+```
+
+### Breaking News with Formatting
+
+Get breaking news with formatted output:
+
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?limit=3&minImportance=9" \
+  -H "X-API-Key: byul_api_key" \
+  -H "Content-Type: application/json" \
+  | jq '.items[] | {title: .title, importance: .importanceScore, date: .date}'
+```
+
+<Tip>
+**Install jq**: Use `brew install jq` (macOS) or `apt-get install jq` (Ubuntu) to format JSON output.
+</Tip>
+
+## Advanced Filtering
+
+### Symbol-Specific News
+
+Get news for specific stocks or ETFs:
+
+```bash
+# Apple (AAPL) news
+curl -X GET "https://api.byul.ai/api/v2/news?symbol=AAPL&limit=10" \
+  -H "X-API-Key: byul_api_key"
+
+# Multiple symbols (use separate requests)
+curl -X GET "https://api.byul.ai/api/v2/news?symbol=TSLA&minImportance=7" \
+  -H "X-API-Key: byul_api_key"
+```
+
+### Search by Keywords
+
+Search for specific topics or events:
+
+```bash
+# Fed-related news
+curl -X GET "https://api.byul.ai/api/v2/news?q=federal%20reserve&minImportance=6" \
+  -H "X-API-Key: byul_api_key"
+
+# Earnings announcements
+curl -X GET "https://api.byul.ai/api/v2/news?q=earnings&minImportance=7&limit=20" \
+  -H "X-API-Key: byul_api_key"
+```
+
+## Pagination
+
+### Using Cursors
+
+Handle large result sets with pagination:
+
+```bash
+# First page
+curl -X GET "https://api.byul.ai/api/v2/news?limit=50" \
+  -H "X-API-Key: byul_api_key" \
+  > first_page.json
+
+# Extract nextCursor from response
+NEXT_CURSOR=$(cat first_page.json | jq -r '.nextCursor')
+
+# Second page
+curl -X GET "https://api.byul.ai/api/v2/news?limit=50&cursor=$NEXT_CURSOR" \
+  -H "X-API-Key: byul_api_key"
+```
+
+### Since ID Filtering
+
+Get news after a specific article:
+
+```bash
+# Get latest news first
+LATEST_ID=$(curl -s -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+  -H "X-API-Key: byul_api_key" | jq -r '.items[0]._id')
+
+# Later, get news since that ID
+curl -X GET "https://api.byul.ai/api/v2/news?sinceId=$LATEST_ID" \
+  -H "X-API-Key: byul_api_key"
+```
+
+## Response Handling
+
+### Save to File
+
+Save API responses for analysis:
+
+```bash
+# Save raw JSON
+curl -X GET "https://api.byul.ai/api/v2/news?minImportance=8&limit=100" \
+  -H "X-API-Key: byul_api_key" \
+  -o market_news.json
+
+# Save formatted output
+curl -X GET "https://api.byul.ai/api/v2/news?minImportance=8&limit=50" \
+  -H "X-API-Key: byul_api_key" \
+  | jq '.items[] | {title, importance: .importanceScore, symbols, date}' \
+  > formatted_news.json
+```
+
+### Extract Specific Fields
+
+Get only the information you need:
+
+```bash
+# Just titles and importance scores
+curl -s -X GET "https://api.byul.ai/api/v2/news?minImportance=7&limit=10" \
+  -H "X-API-Key: byul_api_key" \
+  | jq -r '.items[] | "\(.importanceScore)/10: \(.title)"'
+
+# Stock symbols and news count
+curl -s -X GET "https://api.byul.ai/api/v2/news?limit=100" \
+  -H "X-API-Key: byul_api_key" \
+  | jq -r '.items[].symbols[]?' | sort | uniq -c | sort -nr
+```
+
+## Error Handling
+
+### Check API Status
+
+Verify API availability and your authentication:
+
+```bash
+# Test connection
+curl -I -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+  -H "X-API-Key: byul_api_key"
+
+# Check rate limit headers
+curl -v -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+  -H "X-API-Key: byul_api_key" 2>&1 | grep -i "x-v2-ratelimit"
+```
+
+### Handle Rate Limits
+
+Check remaining rate limit:
+
+```bash
+# Get rate limit information
+curl -s -I -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+  -H "X-API-Key: byul_api_key" | grep -i "x-v2-ratelimit"
+```
+
+### Retry Logic with Backoff
+
+Implement retry logic in shell scripts:
+
+```bash
+#!/bin/bash
+API_KEY="byul_api_key"
+MAX_RETRIES=3
+RETRY_DELAY=1
+
+for i in $(seq 1 $MAX_RETRIES); do
+    response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+        -X GET "https://api.byul.ai/api/v2/news?minImportance=8&limit=10" \
+        -H "X-API-Key: $API_KEY")
+    
+    http_code=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+    body=$(echo $response | sed -e 's/HTTPSTATUS:.*//g')
+    
+    if [ $http_code -eq 200 ]; then
+        echo $body | jq '.'
+        break
+    elif [ $http_code -eq 429 ]; then
+        echo "Rate limited, retrying in ${RETRY_DELAY}s..."
+        sleep $RETRY_DELAY
+        RETRY_DELAY=$((RETRY_DELAY * 2))  # Exponential backoff
+    else
+        echo "Error: HTTP $http_code"
+        echo $body
+        break
+    fi
+done
+```
+
+## Monitoring and Automation
+
+### Real-time Monitoring Script
+
+Create a monitoring script for breaking news:
+
+```bash
+#!/bin/bash
+API_KEY="byul_api_key"
+LAST_CHECK=""
+
+while true; do
+    # Get high-importance news
+    if [ -n "$LAST_CHECK" ]; then
+        response=$(curl -s "https://api.byul.ai/api/v2/news?minImportance=8&sinceId=$LAST_CHECK" \
+            -H "X-API-Key: $API_KEY")
+    else
+        response=$(curl -s "https://api.byul.ai/api/v2/news?minImportance=8&limit=5" \
+            -H "X-API-Key: $API_KEY")
+    fi
+    
+    # Process new articles
+    echo $response | jq -r '.items[]? | "BREAKING: \(.title) (Importance: \(.importanceScore)/10)"'
+    
+    # Update last check
+    LAST_CHECK=$(echo $response | jq -r '.items[0]._id // empty')
+    
+    sleep 30  # Check every 30 seconds
+done
+```
+
+### CI/CD Integration
+
+Use in automated testing:
+
+```bash
+# Test API in CI pipeline
+#!/bin/bash
+set -e
+
+echo "Testing Byul API connectivity..."
+response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+    -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+    -H "X-API-Key: $BYUL_API_KEY")
+
+http_code=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+if [ $http_code -eq 200 ]; then
+    echo "✓ API connection successful"
+else
+    echo "✗ API connection failed with code: $http_code"
+    exit 1
+fi
+```
+
+## Performance Testing
+
+### Latency Testing
+
+Measure API response times:
+
+```bash
+# Single request timing
+time curl -s -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+  -H "X-API-Key: byul_api_key" > /dev/null
+
+# Multiple requests with timing
+for i in {1..10}; do
+    time_result=$(time ( curl -s -X GET "https://api.byul.ai/api/v2/news?limit=10" \
+        -H "X-API-Key: byul_api_key" > /dev/null ) 2>&1 )
+    echo "Request $i: $time_result"
+done
+```
+
+### Load Testing
+
+Test with multiple concurrent requests:
+
+```bash
+# Simple parallel requests
+for i in {1..5}; do
+    curl -s -X GET "https://api.byul.ai/api/v2/news?limit=10" \
+        -H "X-API-Key: byul_api_key" &
+done
+wait
+echo "All requests completed"
+```
+
+## Environment Variables
+
+Set up environment variables for security:
+
+```bash
+# Export your API key
+export BYUL_API_KEY="byul_api_key"
+
+# Use in requests
+curl -X GET "https://api.byul.ai/api/v2/news?minImportance=8" \
+  -H "X-API-Key: $BYUL_API_KEY"
+
+# Or from file
+curl -X GET "https://api.byul.ai/api/v2/news?limit=10" \
+  -H "X-API-Key: $(cat ~/.byul_api_key)"
+```
+
+<Warning>
+**Security Best Practice**: Never hardcode API keys in scripts. Always use environment variables or secure files with proper permissions.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Node.js Examples" href="/rest-api/examples/nodejs">
+Build production applications with Node.js
+</Card>
+<Card title="Python Examples" href="/rest-api/examples/python">  
+Data analysis and algorithmic trading with Python
+</Card>
+<Card title="Error Handling" href="/rest-api/error-handling">
+Implement robust error handling strategies
+</Card>
+<Card title="Rate Limiting" href="/rest-api/news/filtering">
+Optimize API usage and manage rate limits
+</Card>
+</CardGroup>

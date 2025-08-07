@@ -1,0 +1,761 @@
+---
+title: "PHP"
+description: "Complete PHP examples for REST API integration"
+icon: "php"
+---
+
+## Basic Usage
+
+### Simple News Fetch
+
+```php
+<?php
+function getNews($limit = 10, $minImportance = 7) {
+    $apiKey = getenv('BYUL_API_KEY');
+    
+    $url = 'https://api.byul.ai/api/v2/news?' . http_build_query([
+        'limit' => $limit,
+        'minImportance' => $minImportance
+    ]);
+    
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => 'X-API-Key: ' . $apiKey,
+            'timeout' => 30
+        ]
+    ]);
+    
+    $response = file_get_contents($url, false, $context);
+    
+    if ($response === false) {
+        throw new Exception('Failed to fetch news');
+    }
+    
+    $data = json_decode($response, true);
+    
+    if ($data === null) {
+        throw new Exception('Invalid JSON response');
+    }
+    
+    echo "Retrieved " . count($data['items']) . " articles\n";
+    
+    foreach ($data['items'] as $article) {
+        echo "{$article['title']} - Importance: {$article['importanceScore']}/10\n";
+    }
+    
+    return $data;
+}
+
+// Usage
+try {
+    $news = getNews();
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+?>
+```
+
+### Using cURL with Error Handling
+
+```php
+<?php
+class ByulAPIException extends Exception {
+    public $statusCode;
+    public $errorType;
+    
+    public function __construct($message, $statusCode = 0, $errorType = 'Unknown', $previous = null) {
+        parent::__construct($message, $statusCode, $previous);
+        $this->statusCode = $statusCode;
+        $this->errorType = $errorType;
+    }
+}
+
+function safeGetNews($filters = []) {
+    $apiKey = getenv('BYUL_API_KEY');
+    
+    if (!$apiKey) {
+        throw new ByulAPIException('BYUL_API_KEY environment variable not set');
+    }
+    
+    // Default parameters
+    $params = array_merge([
+        'limit' => 20,
+        'minImportance' => 6
+    ], $filters);
+    
+    $url = 'https://api.byul.ai/api/v2/news?' . http_build_query($params);
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['X-API-Key: ' . $apiKey],
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_USERAGENT => 'Byul-PHP-Client/1.0'
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    
+    curl_close($ch);
+    
+    if ($curlError) {
+        throw new ByulAPIException("cURL error: $curlError");
+    }
+    
+    $data = json_decode($response, true);
+    
+    if ($httpCode !== 200) {
+        $message = $data['message'] ?? "HTTP $httpCode";
+        $errorType = $data['error'] ?? 'HTTP Error';
+        throw new ByulAPIException($message, $httpCode, $errorType);
+    }
+    
+    return $data;
+}
+
+// Usage with error handling
+try {
+    $news = safeGetNews(['symbol' => 'AAPL']);
+    echo "Found " . count($news['items']) . " AAPL articles\n";
+} catch (ByulAPIException $e) {
+    switch ($e->statusCode) {
+        case 401:
+            echo "Authentication failed: Check your API key\n";
+            break;
+        case 429:
+            echo "Rate limit exceeded: Please wait before retrying\n";
+            break;
+        case 400:
+            echo "Bad request: " . $e->getMessage() . "\n";
+            break;
+        default:
+            echo "API Error ({$e->statusCode}): " . $e->getMessage() . "\n";
+    }
+}
+?>
+```
+
+## Laravel Integration
+
+### News Service Class
+
+```php
+<?php
+// app/Services/ByulNewsService.php
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+
+class ByulNewsService
+{
+    private $baseUrl;
+    private $apiKey;
+    
+    public function __construct()
+    {
+        $this->baseUrl = 'https://api.byul.ai/api/v2';
+        $this->apiKey = config('services.byul.api_key');
+    }
+    
+    public function getNews(array $filters = []): array
+    {
+        $cacheKey = 'byul_news_' . md5(serialize($filters));
+        
+        return Cache::remember($cacheKey, 300, function () use ($filters) {
+            return $this->makeRequest('/news', $filters);
+        });
+    }
+    
+    public function getHealthStatus(): array
+    {
+        return $this->makeRequest('/news/health');
+    }
+    
+    public function getAllNews(array $filters = []): array
+    {
+        $allNews = [];
+        $cursor = null;
+        $maxPages = 100; // Safety limit
+        $currentPage = 0;
+        
+        do {
+            $params = array_merge($filters, ['limit' => 100]);
+            if ($cursor) {
+                $params['cursor'] = $cursor;
+            }
+            
+            $data = $this->makeRequest('/news', $params);
+            $allNews = array_merge($allNews, $data['items']);
+            
+            $cursor = $data['nextCursor'] ?? null;
+            $hasMore = $data['hasMore'] ?? false;
+            $currentPage++;
+            
+        } while ($hasMore && $cursor && $currentPage < $maxPages);
+        
+        return $allNews;
+    }
+    
+    public function getPortfolioNews(array $symbols, int $minImportance = 6): array
+    {
+        $allNews = [];
+        $seenIds = [];
+        
+        foreach ($symbols as $symbol) {
+            try {
+                $data = $this->getNews([
+                    'symbol' => $symbol,
+                    'minImportance' => $minImportance,
+                    'limit' => 50
+                ]);
+                
+                foreach ($data['items'] as $article) {
+                    if (!in_array($article['_id'], $seenIds)) {
+                        $allNews[] = $article;
+                        $seenIds[] = $article['_id'];
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning("Failed to fetch news for symbol $symbol: " . $e->getMessage());
+            }
+        }
+        
+        // Sort by importance
+        usort($allNews, function ($a, $b) {
+            return $b['importanceScore'] - $a['importanceScore'];
+        });
+        
+        return $allNews;
+    }
+    
+    private function makeRequest(string $endpoint, array $params = []): array
+    {
+        $response = Http::withHeaders([
+            'X-API-Key' => $this->apiKey
+        ])
+        ->timeout(30)
+        ->get($this->baseUrl . $endpoint, $params);
+        
+        if ($response->failed()) {
+            $errorData = $response->json();
+            $message = $errorData['message'] ?? 'API request failed';
+            
+            Log::error("Byul API error: $message", [
+                'status' => $response->status(),
+                'endpoint' => $endpoint,
+                'params' => $params
+            ]);
+            
+            throw new \Exception("API Error: $message", $response->status());
+        }
+        
+        return $response->json();
+    }
+}
+```
+
+### Laravel Controller
+
+```php
+<?php
+// app/Http/Controllers/NewsController.php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Services\ByulNewsService;
+use Illuminate\Http\JsonResponse;
+
+class NewsController extends Controller
+{
+    private $newsService;
+    
+    public function __construct(ByulNewsService $newsService)
+    {
+        $this->newsService = $newsService;
+    }
+    
+    public function index(Request $request): JsonResponse
+    {
+        $request->validate([
+            'limit' => 'integer|min:1|max:100',
+            'minImportance' => 'integer|min:1|max:10',
+            'symbol' => 'string|max:10',
+            'q' => 'string|max:100'
+        ]);
+        
+        try {
+            $filters = $request->only(['limit', 'minImportance', 'symbol', 'q']);
+            $news = $this->newsService->getNews($filters);
+            
+            return response()->json($news);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to fetch news',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function portfolio(Request $request): JsonResponse
+    {
+        $request->validate([
+            'symbols' => 'required|array|min:1',
+            'symbols.*' => 'string|max:10',
+            'minImportance' => 'integer|min:1|max:10'
+        ]);
+        
+        try {
+            $symbols = $request->input('symbols');
+            $minImportance = $request->input('minImportance', 6);
+            
+            $news = $this->newsService->getPortfolioNews($symbols, $minImportance);
+            
+            return response()->json([
+                'items' => $news,
+                'count' => count($news),
+                'symbols' => $symbols
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to fetch portfolio news',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function health(): JsonResponse
+    {
+        try {
+            $status = $this->newsService->getHealthStatus();
+            return response()->json($status);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'unhealthy',
+                'message' => $e->getMessage()
+            ], 503);
+        }
+    }
+}
+```
+
+### Routes
+
+```php
+<?php
+// routes/api.php
+use App\Http\Controllers\NewsController;
+
+Route::prefix('v1')->middleware(['throttle:100,1'])->group(function () {
+    Route::get('/news', [NewsController::class, 'index']);
+    Route::post('/news/portfolio', [NewsController::class, 'portfolio']);
+    Route::get('/health', [NewsController::class, 'health']);
+});
+```
+
+### Configuration
+
+```php
+<?php
+// config/services.php
+return [
+    // ... other services
+    
+    'byul' => [
+        'api_key' => env('BYUL_API_KEY'),
+    ],
+];
+```
+
+## Advanced Examples
+
+### WordPress Plugin
+
+```php
+<?php
+/**
+ * Plugin Name: Byul News Widget
+ * Description: Display financial news from Byul AI
+ * Version: 1.0.0
+ */
+
+class ByulNewsWidget extends WP_Widget
+{
+    public function __construct()
+    {
+        parent::__construct(
+            'byul_news_widget',
+            'Byul Financial News',
+            ['description' => 'Display latest financial news from Byul AI']
+        );
+    }
+    
+    public function widget($args, $instance)
+    {
+        echo $args['before_widget'];
+        
+        $title = apply_filters('widget_title', $instance['title']);
+        if (!empty($title)) {
+            echo $args['before_title'] . $title . $args['after_title'];
+        }
+        
+        $limit = $instance['limit'] ?? 5;
+        $minImportance = $instance['min_importance'] ?? 7;
+        
+        $news = $this->getNews($limit, $minImportance);
+        
+        if ($news) {
+            echo '<ul class="byul-news-list">';
+            foreach ($news['items'] as $article) {
+                echo '<li class="news-item importance-' . $article['importanceScore'] . '">';
+                echo '<a href="' . esc_url($article['url']) . '" target="_blank" rel="noopener">';
+                echo esc_html($article['title']);
+                echo '</a>';
+                echo '<span class="importance-badge">' . $article['importanceScore'] . '/10</span>';
+                echo '</li>';
+            }
+            echo '</ul>';
+        } else {
+            echo '<p>Unable to load news at this time.</p>';
+        }
+        
+        echo $args['after_widget'];
+    }
+    
+    public function form($instance)
+    {
+        $title = $instance['title'] ?? 'Financial News';
+        $limit = $instance['limit'] ?? 5;
+        $minImportance = $instance['min_importance'] ?? 7;
+        
+        ?>
+        <p>
+            <label for="<?php echo $this->get_field_id('title'); ?>">Title:</label>
+            <input class="widefat" id="<?php echo $this->get_field_id('title'); ?>" 
+                   name="<?php echo $this->get_field_name('title'); ?>" 
+                   type="text" value="<?php echo esc_attr($title); ?>">
+        </p>
+        <p>
+            <label for="<?php echo $this->get_field_id('limit'); ?>">Number of articles:</label>
+            <input class="widefat" id="<?php echo $this->get_field_id('limit'); ?>" 
+                   name="<?php echo $this->get_field_name('limit'); ?>" 
+                   type="number" min="1" max="20" value="<?php echo esc_attr($limit); ?>">
+        </p>
+        <p>
+            <label for="<?php echo $this->get_field_id('min_importance'); ?>">Minimum importance (1-10):</label>
+            <input class="widefat" id="<?php echo $this->get_field_id('min_importance'); ?>" 
+                   name="<?php echo $this->get_field_name('min_importance'); ?>" 
+                   type="number" min="1" max="10" value="<?php echo esc_attr($minImportance); ?>">
+        </p>
+        <?php
+    }
+    
+    public function update($new_instance, $old_instance)
+    {
+        $instance = [];
+        $instance['title'] = !empty($new_instance['title']) ? strip_tags($new_instance['title']) : '';
+        $instance['limit'] = (int) $new_instance['limit'];
+        $instance['min_importance'] = (int) $new_instance['min_importance'];
+        
+        return $instance;
+    }
+    
+    private function getNews($limit, $minImportance)
+    {
+        $apiKey = get_option('byul_api_key');
+        if (!$apiKey) {
+            return false;
+        }
+        
+        $transient_key = 'byul_news_' . $limit . '_' . $minImportance;
+        $cached_news = get_transient($transient_key);
+        
+        if ($cached_news !== false) {
+            return $cached_news;
+        }
+        
+        $url = 'https://api.byul.ai/api/v2/news?' . http_build_query([
+            'limit' => $limit,
+            'minImportance' => $minImportance
+        ]);
+        
+        $response = wp_remote_get($url, [
+            'timeout' => 30,
+            'headers' => ['X-API-Key' => $apiKey]
+        ]);
+        
+        if (is_wp_error($response)) {
+            return false;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if ($data && isset($data['items'])) {
+            // Cache for 5 minutes
+            set_transient($transient_key, $data, 300);
+            return $data;
+        }
+        
+        return false;
+    }
+}
+
+// Register widget
+function register_byul_news_widget()
+{
+    register_widget('ByulNewsWidget');
+}
+add_action('widgets_init', 'register_byul_news_widget');
+
+// Admin settings page
+function byul_news_admin_menu()
+{
+    add_options_page(
+        'Byul News Settings',
+        'Byul News',
+        'manage_options',
+        'byul-news-settings',
+        'byul_news_settings_page'
+    );
+}
+add_action('admin_menu', 'byul_news_admin_menu');
+
+function byul_news_settings_page()
+{
+    if (isset($_POST['submit'])) {
+        update_option('byul_api_key', sanitize_text_field($_POST['byul_api_key']));
+        echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
+    }
+    
+    $apiKey = get_option('byul_api_key', '');
+    
+    ?>
+    <div class="wrap">
+        <h1>Byul News Settings</h1>
+        <form method="post" action="">
+            <table class="form-table">
+                <tr>
+                    <th scope="row">API Key</th>
+                    <td>
+                        <input type="text" name="byul_api_key" value="<?php echo esc_attr($apiKey); ?>" 
+                               class="regular-text" placeholder="byul_api_key_here">
+                        <p class="description">Get your API key from <a href="https://www.byul.ai/api/dashboard" target="_blank">Byul Dashboard</a></p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <?php
+}
+```
+
+### Rate Limiting Class
+
+```php
+<?php
+class RateLimiter
+{
+    private $storage;
+    private $prefix;
+    
+    public function __construct($storage = 'file', $prefix = 'byul_rate_limit_')
+    {
+        $this->storage = $storage;
+        $this->prefix = $prefix;
+    }
+    
+    public function isAllowed(string $key, int $limit = 100, int $window = 3600): bool
+    {
+        $fullKey = $this->prefix . $key;
+        $now = time();
+        
+        // Get current requests
+        $requests = $this->getRequests($fullKey);
+        
+        // Filter out expired requests
+        $requests = array_filter($requests, function($timestamp) use ($now, $window) {
+            return ($now - $timestamp) < $window;
+        });
+        
+        if (count($requests) < $limit) {
+            // Add current request
+            $requests[] = $now;
+            $this->setRequests($fullKey, $requests, $window);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    private function getRequests(string $key): array
+    {
+        if ($this->storage === 'file') {
+            $filename = sys_get_temp_dir() . '/' . $key;
+            if (file_exists($filename)) {
+                $data = file_get_contents($filename);
+                return json_decode($data, true) ?: [];
+            }
+        }
+        
+        return [];
+    }
+    
+    private function setRequests(string $key, array $requests, int $ttl): void
+    {
+        if ($this->storage === 'file') {
+            $filename = sys_get_temp_dir() . '/' . $key;
+            file_put_contents($filename, json_encode($requests));
+            
+            // Set file expiration (basic cleanup)
+            touch($filename, time() + $ttl);
+        }
+    }
+    
+    public function getRemaining(string $key, int $limit = 100, int $window = 3600): int
+    {
+        $fullKey = $this->prefix . $key;
+        $now = time();
+        
+        $requests = $this->getRequests($fullKey);
+        $requests = array_filter($requests, function($timestamp) use ($now, $window) {
+            return ($now - $timestamp) < $window;
+        });
+        
+        return max(0, $limit - count($requests));
+    }
+}
+
+// Usage in API client
+class RateLimitedByulClient
+{
+    private $apiKey;
+    private $rateLimiter;
+    
+    public function __construct(string $apiKey)
+    {
+        $this->apiKey = $apiKey;
+        $this->rateLimiter = new RateLimiter();
+    }
+    
+    public function getNews(array $filters = []): array
+    {
+        $clientId = 'api_' . md5($this->apiKey);
+        
+        if (!$this->rateLimiter->isAllowed($clientId, 60, 60)) { // 60 requests per minute
+            $remaining = $this->rateLimiter->getRemaining($clientId, 60, 60);
+            throw new Exception("Rate limit exceeded. Try again in " . (60 - $remaining) . " seconds.");
+        }
+        
+        // Make API request
+        $url = 'https://api.byul.ai/api/v2/news?' . http_build_query($filters);
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['X-API-Key: ' . $this->apiKey],
+            CURLOPT_TIMEOUT => 30
+        ]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode !== 200) {
+            throw new Exception("API request failed with status $httpCode");
+        }
+        
+        return json_decode($response, true);
+    }
+}
+```
+
+## Environment Setup
+
+### Composer Setup
+
+```json
+{
+    "name": "your-company/byul-news-client",
+    "description": "PHP client for Byul AI News API",
+    "type": "library",
+    "require": {
+        "php": ">=7.4",
+        "guzzlehttp/guzzle": "^7.0",
+        "monolog/monolog": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "squizlabs/php_codesniffer": "^3.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "ByulNews\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ByulNews\\Tests\\": "tests/"
+        }
+    }
+}
+```
+
+### Installation
+
+```bash
+# Install dependencies
+composer install
+
+# Set environment variable
+export BYUL_API_KEY=byul_api_key
+
+# Run the example
+php examples/basic_usage.php
+```
+
+### Using with .env file
+
+```php
+<?php
+// Load .env file
+function loadEnv($file) {
+    if (!file_exists($file)) {
+        return;
+    }
+    
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+        
+        list($name, $value) = explode('=', $line, 2);
+        $name = trim($name);
+        $value = trim($value);
+        
+        if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
+            putenv(sprintf('%s=%s', $name, $value));
+            $_ENV[$name] = $value;
+            $_SERVER[$name] = $value;
+        }
+    }
+}
+
+loadEnv(__DIR__ . '/.env');
+
+// Now you can use getenv('BYUL_API_KEY')
+```
+
+Create `.env` file:
+```
+BYUL_API_KEY=byul_api_key
+DEBUG=true
+```

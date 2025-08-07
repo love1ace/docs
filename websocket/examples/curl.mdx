@@ -1,0 +1,376 @@
+---
+title: "cURL"
+description: "Test WebSocket connectivity and troubleshoot connection issues with cURL"
+icon: "terminal"
+---
+<Warning>
+**Limited WebSocket Support**: cURL has basic WebSocket support (v7.86+). For full WebSocket functionality, use dedicated clients like Node.js, Python, or PHP.
+</Warning>
+
+## Connection Testing
+
+### Basic WebSocket Connection Test
+
+Test if the WebSocket endpoint is accessible:
+
+```bash
+# Test WebSocket endpoint connectivity
+curl --include \
+     --no-buffer \
+     --header "Connection: Upgrade" \
+     --header "Upgrade: websocket" \
+     --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+     --header "Sec-WebSocket-Version: 13" \
+     --header "X-API-Key: byul_api_key" \
+     https://api.byul.ai/news-v2
+```
+
+### Test with Authentication Headers
+
+```bash
+# Test with multiple authentication methods
+curl --include \
+     --no-buffer \
+     --header "Connection: Upgrade" \
+     --header "Upgrade: websocket" \
+     --header "Sec-WebSocket-Key: $(echo -n "test" | base64)" \
+     --header "Sec-WebSocket-Version: 13" \
+     --header "X-API-Key: byul_api_key" \
+     --header "Authorization: Bearer byul_api_key" \
+     wss://api.byul.ai/news-v2
+```
+
+## Advanced cURL WebSocket (7.86+)
+
+### WebSocket Connection with Modern cURL
+
+If you have cURL 7.86 or later with WebSocket support:
+
+```bash
+# Connect to WebSocket and send messages
+curl --include \
+     --no-buffer \
+     --header "X-API-Key: byul_api_key" \
+     --websocket \
+     wss://api.byul.ai/news-v2 \
+     --data-raw '{"type":"auth","apiKey":"byul_api_key"}'
+```
+
+### Subscribe to News with cURL
+
+```bash
+# Send subscription message
+curl --websocket \
+     --header "X-API-Key: byul_api_key" \
+     wss://api.byul.ai/news-v2 \
+     --data-raw '{"type":"news:subscribe","minImportance":8,"limit":10}'
+```
+
+## HTTP Alternative Testing
+
+### Test REST API Endpoints
+
+Since WebSocket requires persistent connections, test the related REST endpoints:
+
+```bash
+# Test if the base API is working
+curl -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+     -H "X-API-Key: byul_api_key" \
+     -v
+
+# Check authentication
+curl -I -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+     -H "X-API-Key: byul_api_key"
+```
+
+### Health Check Script
+
+```bash
+#!/bin/bash
+# WebSocket connectivity health check
+
+API_KEY="byul_api_key"
+BASE_URL="https://api.byul.ai/api/v2"
+WEBSOCKET_URL="wss://api.byul.ai/news-v2"
+
+echo "Testing Byul API Connectivity..."
+
+# Test 1: REST API Health
+echo "1. Testing REST API..."
+REST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "${BASE_URL}/news?limit=1" \
+  -H "X-API-Key: $API_KEY")
+
+if [ "$REST_STATUS" -eq 200 ]; then
+    echo "   REST API: OK"
+else
+    echo "   REST API: Failed (HTTP $REST_STATUS)"
+    exit 1
+fi
+
+# Test 2: WebSocket Endpoint Reachability
+echo "2. Testing WebSocket endpoint reachability..."
+WS_RESPONSE=$(curl -s -I \
+  --header "Connection: Upgrade" \
+  --header "Upgrade: websocket" \
+  --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+  --header "Sec-WebSocket-Version: 13" \
+  --header "X-API-Key: $API_KEY" \
+  https://api.byul.ai/news-v2 2>&1)
+
+if echo "$WS_RESPONSE" | grep -q "101"; then
+    echo "   WebSocket: Endpoint accessible"
+elif echo "$WS_RESPONSE" | grep -q "401"; then
+    echo "   WebSocket: Authentication failed"
+    exit 1
+elif echo "$WS_RESPONSE" | grep -q "403"; then
+    echo "   WebSocket: Plan upgrade required (Pro/Enterprise only)"
+    exit 1
+else
+    echo "   WebSocket: Connection test inconclusive"
+    echo "   Response: $WS_RESPONSE"
+fi
+
+# Test 3: Network connectivity
+echo "3. Testing network connectivity..."
+if ping -c 1 api.byul.ai &> /dev/null; then
+    echo "   Network: Host reachable"
+else
+    echo "   Network: Host unreachable"
+    exit 1
+fi
+
+echo "All connectivity tests passed!"
+```
+
+## Troubleshooting Commands
+
+### Check SSL/TLS Certificate
+
+```bash
+# Verify SSL certificate
+openssl s_client -connect api.byul.ai:443 -servername api.byul.ai
+
+# Check certificate expiration
+echo | openssl s_client -connect api.byul.ai:443 2>/dev/null | openssl x509 -noout -dates
+```
+
+### DNS Resolution Testing
+
+```bash
+# Test DNS resolution
+nslookup api.byul.ai
+
+# Alternative DNS test
+dig api.byul.ai
+
+# Test with different DNS servers
+dig @8.8.8.8 api.byul.ai
+dig @1.1.1.1 api.byul.ai
+```
+
+### Network Path Testing
+
+```bash
+# Trace network path
+traceroute api.byul.ai
+
+# Test specific port connectivity
+telnet api.byul.ai 443
+
+# Test with timeout
+timeout 5 bash -c "</dev/tcp/api.byul.ai/443"
+```
+
+## Monitoring Scripts
+
+### Connection Monitoring
+
+```bash
+#!/bin/bash
+# Monitor WebSocket connectivity
+
+API_KEY="byul_api_key"
+LOG_FILE="websocket_monitor.log"
+ALERT_EMAIL="admin@yourcompany.com"
+
+monitor_connection() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Test REST API as proxy for service health
+    local status=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+        -H "X-API-Key: $API_KEY")
+    
+    if [ "$status" -eq 200 ]; then
+        echo "[$timestamp] Service healthy" >> $LOG_FILE
+        return 0
+    else
+        echo "[$timestamp] Service unhealthy (HTTP $status)" >> $LOG_FILE
+        send_alert "Byul API service is down (HTTP $status)"
+        return 1
+    fi
+}
+
+send_alert() {
+    local message="$1"
+    # Send email alert (requires mail command)
+    echo "Alert: $message" | mail -s "Byul API Alert" "$ALERT_EMAIL"
+    
+    # Or send to Slack (if webhook configured)
+    # curl -X POST -H 'Content-type: application/json' \
+    #   --data "{\"text\":\"$message\"}" \
+    #   "$SLACK_WEBHOOK_URL"
+}
+
+# Run monitoring loop
+while true; do
+    monitor_connection
+    sleep 60  # Check every minute
+done
+```
+
+### Performance Testing
+
+```bash
+#!/bin/bash
+# Test API performance and latency
+
+API_KEY="byul_api_key"
+ENDPOINT="https://api.byul.ai/api/v2/news?limit=1"
+
+echo "Testing API Performance..."
+echo "Endpoint: $ENDPOINT"
+echo "===================="
+
+# Test multiple requests and measure timing
+total_time=0
+successful_requests=0
+failed_requests=0
+
+for i in {1..10}; do
+    start_time=$(date +%s.%3N)
+    
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X GET "$ENDPOINT" \
+        -H "X-API-Key: $API_KEY")
+    
+    end_time=$(date +%s.%3N)
+    duration=$(echo "$end_time - $start_time" | bc -l)
+    
+    if [ "$http_code" -eq 200 ]; then
+        echo "Request $i: ${duration}s - OK"
+        total_time=$(echo "$total_time + $duration" | bc -l)
+        ((successful_requests++))
+    else
+        echo "Request $i: Failed (HTTP $http_code)"
+        ((failed_requests++))
+    fi
+done
+
+# Calculate average
+if [ $successful_requests -gt 0 ]; then
+    average_time=$(echo "$total_time / $successful_requests" | bc -l)
+    printf "==================\n"
+    printf "Average Response Time: %.3fs\n" $average_time
+    printf "Success Rate: %d/%d (%.1f%%)\n" \
+        $successful_requests $((successful_requests + failed_requests)) \
+        $(echo "$successful_requests * 100 / ($successful_requests + $failed_requests)" | bc -l)
+fi
+```
+
+## CI/CD Integration
+
+### GitHub Actions WebSocket Test
+
+```yaml
+# .github/workflows/websocket-test.yml
+name: WebSocket Connectivity Test
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  push:
+    branches: [ main ]
+
+jobs:
+  test-websocket:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Test Byul API Connectivity
+      run: |
+        # Test REST API
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+          -H "X-API-Key: ${{ secrets.BYUL_API_KEY }}")
+        
+        if [ "$STATUS" -eq 200 ]; then
+          echo "API connectivity test passed"
+        else
+          echo "API connectivity test failed (HTTP $STATUS)"
+          exit 1
+        fi
+        
+    - name: Test WebSocket Endpoint
+      run: |
+        # Basic WebSocket endpoint test
+        curl --fail --max-time 10 \
+          --header "Connection: Upgrade" \
+          --header "Upgrade: websocket" \
+          --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+          --header "Sec-WebSocket-Version: 13" \
+          --header "X-API-Key: ${{ secrets.BYUL_API_KEY }}" \
+          https://api.byul.ai/news-v2 || echo "WebSocket test completed"
+```
+
+### Docker Health Check
+
+```dockerfile
+# Add to your Dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f -X GET "https://api.byul.ai/api/v2/news?limit=1" \
+      -H "X-API-Key: $BYUL_API_KEY" || exit 1
+```
+
+## WebSocket-Specific Testing Tools
+
+### Install WebSocket Testing Tools
+
+```bash
+# Install websocat (WebSocket client)
+curl -L https://github.com/vi/websocat/releases/download/v1.11.0/websocat.x86_64-unknown-linux-musl \
+  -o websocat && chmod +x websocat
+
+# Test with websocat
+echo '{"type":"auth","apiKey":"byul_api_key"}' | \
+  ./websocat wss://api.byul.ai/news-v2
+
+# Install wscat (Node.js WebSocket client)
+npm install -g wscat
+
+# Test with wscat
+wscat -c "wss://api.byul.ai/news-v2" \
+  -H "X-API-Key: byul_api_key"
+```
+
+<Info>
+**Recommended Approach**: While cURL can test basic connectivity, use dedicated WebSocket clients like `websocat`, `wscat`, or programming language-specific libraries for full WebSocket functionality testing.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Full WebSocket Examples" href="/websocket/examples/nodejs">
+Complete WebSocket implementation examples
+</Card>
+<Card title="Error Handling Guide" href="/websocket/error-handling">
+Handle WebSocket errors and implement reconnection logic
+</Card>
+<Card title="Authentication" href="/websocket/authentication">
+Secure WebSocket authentication methods
+</Card>
+<Card title="Connection Management" href="/websocket/connection">
+Best practices for stable WebSocket connections
+</Card>
+</CardGroup>
