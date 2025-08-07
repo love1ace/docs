@@ -1,0 +1,620 @@
+---
+title: "Error Handling"
+description: "Comprehensive error handling and recovery strategies for WebSocket connections"
+---
+
+## Error Types
+
+### Connection Errors
+
+Connection errors occur during the initial WebSocket handshake or due to network issues.
+
+```javascript
+socket.on('connect_error', (error) => {
+  console.error('Connection failed:', error.message);
+  
+  switch (error.type) {
+    case 'TransportError':
+      handleTransportError(error);
+      break;
+    case 'timeout':
+      handleTimeoutError(error);
+      break;
+    case 'poll error':
+      handlePollError(error);
+      break;
+    default:
+      handleGenericError(error);
+  }
+});
+```
+
+### Authentication Errors
+
+Authentication errors occur during connection establishment.
+
+<Info>
+For detailed authentication error codes and handling, see [Authentication Error Codes](/websocket/authentication#authentication-error-codes).
+</Info>
+
+```javascript
+socket.on('news:error', (error) => {
+  console.error('Authentication failed:', error.code);
+  // Handle specific authentication errors
+  // See authentication documentation for detailed handling
+});
+```
+
+### Application-Level Errors
+
+Application errors occur during WebSocket operations and data processing.
+
+```javascript
+socket.on('error', (error) => {
+  console.error('WebSocket error:', error);
+  
+  switch (error.type) {
+    case 'ValidationError':
+      console.log('Data validation failed');
+      break;
+    case 'ProcessingError':
+      console.log('Server processing error');
+      break;
+    case 'TimeoutError':
+      console.log('Operation timeout');
+      break;
+    default:
+      console.log('Unknown application error');
+  }
+});
+```
+
+## Error Handling Strategies
+
+### Exponential Backoff
+
+Implement exponential backoff to avoid overwhelming the server during reconnection attempts.
+
+```javascript
+class ExponentialBackoff {
+  constructor(initialDelay = 1000, maxDelay = 30000, factor = 2) {
+    this.initialDelay = initialDelay;
+    this.maxDelay = maxDelay;
+    this.factor = factor;
+    this.attempts = 0;
+  }
+  
+  getDelay() {
+    const delay = Math.min(
+      this.initialDelay * Math.pow(this.factor, this.attempts),
+      this.maxDelay
+    );
+    this.attempts++;
+    return delay;
+  }
+  
+  reset() {
+    this.attempts = 0;
+  }
+}
+
+// Usage
+const backoff = new ExponentialBackoff();
+
+socket.on('disconnect', () => {
+  const delay = backoff.getDelay();
+  console.log(`Reconnecting in ${delay}ms...`);
+  
+  setTimeout(() => {
+    socket.connect();
+  }, delay);
+});
+
+socket.on('connect', () => {
+  backoff.reset(); // Reset on successful connection
+});
+```
+
+### Circuit Breaker Pattern
+
+Prevent cascading failures by implementing a circuit breaker pattern.
+
+```javascript
+class CircuitBreaker {
+  constructor(threshold = 5, timeout = 60000) {
+    this.failureThreshold = threshold;
+    this.timeout = timeout;
+    this.failureCount = 0;
+    this.lastFailureTime = null;
+    this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+  }
+  
+  canAttempt() {
+    if (this.state === 'CLOSED') {
+      return true;
+    }
+    
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime > this.timeout) {
+        this.state = 'HALF_OPEN';
+        return true;
+      }
+      return false;
+    }
+    
+    if (this.state === 'HALF_OPEN') {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  recordSuccess() {
+    this.failureCount = 0;
+    this.state = 'CLOSED';
+  }
+  
+  recordFailure() {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    
+    if (this.failureCount >= this.failureThreshold) {
+      this.state = 'OPEN';
+    }
+  }
+}
+
+// Usage
+const circuitBreaker = new CircuitBreaker();
+
+function attemptConnection() {
+  if (!circuitBreaker.canAttempt()) {
+    console.log('Circuit breaker is OPEN, skipping connection attempt');
+    return;
+  }
+  
+  socket.connect();
+}
+
+socket.on('connect', () => {
+  circuitBreaker.recordSuccess();
+});
+
+socket.on('connect_error', () => {
+  circuitBreaker.recordFailure();
+});
+```
+
+### Retry Logic
+
+Implement intelligent retry logic with different strategies for different error types.
+
+```javascript
+class RetryManager {
+  constructor() {
+    this.maxRetries = {
+      'INVALID_API_KEY': 0,      // Don't retry invalid API key
+      'PLAN_EXPIRED': 0,         // Don't retry expired plan
+      'CONNECTION_LIMIT': 3,     // Limited retries for connection limit
+      'NETWORK_ERROR': 10,       // More retries for network issues
+      'DEFAULT': 5
+    };
+    
+    this.retryCount = {};
+  }
+  
+  shouldRetry(errorCode) {
+    const maxRetries = this.maxRetries[errorCode] || this.maxRetries.DEFAULT;
+    const currentRetries = this.retryCount[errorCode] || 0;
+    
+    return currentRetries < maxRetries;
+  }
+  
+  incrementRetry(errorCode) {
+    this.retryCount[errorCode] = (this.retryCount[errorCode] || 0) + 1;
+  }
+  
+  resetRetries(errorCode = null) {
+    if (errorCode) {
+      this.retryCount[errorCode] = 0;
+    } else {
+      this.retryCount = {};
+    }
+  }
+}
+
+// Usage
+const retryManager = new RetryManager();
+
+socket.on('news:error', (error) => {
+  if (retryManager.shouldRetry(error.code)) {
+    retryManager.incrementRetry(error.code);
+    
+    setTimeout(() => {
+      console.log(`Retrying connection (attempt ${retryManager.retryCount[error.code]})`);
+      socket.connect();
+    }, 5000);
+  } else {
+    console.error('Max retries reached for error:', error.code);
+    handleFinalError(error);
+  }
+});
+
+socket.on('connect', () => {
+  retryManager.resetRetries();
+});
+```
+
+## Error Recovery
+
+### Automatic Reconnection
+
+Configure automatic reconnection with customizable parameters.
+
+```javascript
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: process.env.BYUL_API_KEY },
+  
+  // Reconnection configuration
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
+  
+  // Timeout configuration
+  timeout: 20000
+});
+
+// Handle reconnection events
+socket.on('reconnect_attempt', (attemptNumber) => {
+  console.log(`Reconnection attempt #${attemptNumber}`);
+});
+
+socket.on('reconnect', (attemptNumber) => {
+  console.log(`Reconnected after ${attemptNumber} attempts`);
+  restoreSubscriptions();
+});
+
+socket.on('reconnect_error', (error) => {
+  console.error('Reconnection failed:', error);
+});
+
+socket.on('reconnect_failed', () => {
+  console.error('All reconnection attempts failed');
+  handleConnectionFailure();
+});
+```
+
+### State Recovery
+
+Restore application state after reconnection.
+
+```javascript
+class StateManager {
+  constructor() {
+    this.subscriptions = new Map();
+    this.connectionState = 'disconnected';
+  }
+  
+  saveSubscription(id, params) {
+    this.subscriptions.set(id, params);
+  }
+  
+  removeSubscription(id) {
+    this.subscriptions.delete(id);
+  }
+  
+  restoreSubscriptions(socket) {
+    console.log(`Restoring ${this.subscriptions.size} subscriptions`);
+    
+    for (const [id, params] of this.subscriptions) {
+      socket.emit('news:subscribe', params);
+    }
+  }
+  
+  clearSubscriptions() {
+    this.subscriptions.clear();
+  }
+}
+
+// Usage
+const stateManager = new StateManager();
+
+// Save subscription when created
+socket.emit('news:subscribe', { symbol: 'AAPL' });
+stateManager.saveSubscription('aapl-news', { symbol: 'AAPL' });
+
+// Restore on reconnection
+socket.on('reconnect', () => {
+  stateManager.restoreSubscriptions(socket);
+});
+```
+
+### Graceful Degradation
+
+Implement fallback mechanisms when WebSocket connection fails.
+
+```javascript
+class FallbackManager {
+  constructor() {
+    this.fallbackActive = false;
+    this.pollInterval = null;
+  }
+  
+  activateFallback() {
+    if (this.fallbackActive) return;
+    
+    console.log('Activating fallback to REST API polling');
+    this.fallbackActive = true;
+    
+    // Start polling REST API
+    this.pollInterval = setInterval(() => {
+      this.pollRestAPI();
+    }, 30000); // Poll every 30 seconds
+  }
+  
+  deactivateFallback() {
+    if (!this.fallbackActive) return;
+    
+    console.log('Deactivating fallback, WebSocket restored');
+    this.fallbackActive = false;
+    
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+  
+  async pollRestAPI() {
+    try {
+      const response = await fetch('https://api.byul.ai/api/v2/news', {
+        headers: {
+          'X-API-Key': process.env.BYUL_API_KEY
+        }
+      });
+      
+      const data = await response.json();
+      // Process data same as WebSocket
+      this.processNewsData(data.items);
+      
+    } catch (error) {
+      console.error('Fallback REST API failed:', error);
+    }
+  }
+  
+  processNewsData(articles) {
+    // Same processing logic as WebSocket data
+    articles.forEach(article => {
+      console.log(`News: ${article.title}`);
+    });
+  }
+}
+
+// Usage
+const fallbackManager = new FallbackManager();
+
+socket.on('disconnect', () => {
+  fallbackManager.activateFallback();
+});
+
+socket.on('connect', () => {
+  fallbackManager.deactivateFallback();
+});
+```
+
+## User Experience
+
+### Error Notifications
+
+Provide clear error messages and recovery instructions to users.
+
+```javascript
+class ErrorNotificationManager {
+  constructor() {
+    this.notifications = new Map();
+  }
+  
+  showError(type, message, actions = []) {
+    const notification = {
+      id: Date.now(),
+      type,
+      message,
+      actions,
+      timestamp: new Date()
+    };
+    
+    this.notifications.set(notification.id, notification);
+    this.displayNotification(notification);
+  }
+  
+  displayNotification(notification) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = `error-notification ${notification.type}`;
+    errorDiv.innerHTML = `
+      <div class="error-message">${notification.message}</div>
+      <div class="error-actions">
+        ${notification.actions.map(action => 
+          `<button onclick="${action.handler}">${action.text}</button>`
+        ).join('')}
+      </div>
+    `;
+    
+    document.getElementById('notifications').appendChild(errorDiv);
+  }
+  
+  clearError(id) {
+    this.notifications.delete(id);
+    // Remove from DOM
+    const element = document.getElementById(`notification-${id}`);
+    if (element) {
+      element.remove();
+    }
+  }
+}
+
+// Usage
+const errorNotifications = new ErrorNotificationManager();
+
+socket.on('news:error', (error) => {
+  if (error.code === 'PLAN_EXPIRED') {
+    errorNotifications.showError('warning', 
+      'Your subscription has expired. Please renew to continue using WebSocket features.',
+      [
+        { text: 'Renew Subscription', handler: 'window.open("https://byul.ai/pricing")' },
+        { text: 'Contact Support', handler: 'window.open("https://byul.ai/contact")' }
+      ]
+    );
+  }
+});
+```
+
+### Connection Status Indicator
+
+Display real-time connection status to users.
+
+```javascript
+class ConnectionStatusIndicator {
+  constructor() {
+    this.statusElement = document.getElementById('connection-status');
+    this.indicatorElement = document.getElementById('connection-indicator');
+  }
+  
+  updateStatus(status, message = '') {
+    const statusConfig = {
+      'connected': {
+        class: 'connected',
+        text: 'Connected',
+        color: '#10B981'
+      },
+      'connecting': {
+        class: 'connecting',
+        text: 'Connecting...',
+        color: '#F59E0B'
+      },
+      'disconnected': {
+        class: 'disconnected',
+        text: 'Disconnected',
+        color: '#EF4444'
+      },
+      'error': {
+        class: 'error',
+        text: 'Connection Error',
+        color: '#EF4444'
+      }
+    };
+    
+    const config = statusConfig[status];
+    
+    if (this.statusElement) {
+      this.statusElement.textContent = message || config.text;
+      this.statusElement.className = `status ${config.class}`;
+    }
+    
+    if (this.indicatorElement) {
+      this.indicatorElement.style.backgroundColor = config.color;
+    }
+  }
+}
+
+// Usage
+const statusIndicator = new ConnectionStatusIndicator();
+
+socket.on('connect', () => {
+  statusIndicator.updateStatus('connected');
+});
+
+socket.on('disconnect', () => {
+  statusIndicator.updateStatus('disconnected');
+});
+
+socket.on('connect_error', () => {
+  statusIndicator.updateStatus('error', 'Connection failed');
+});
+```
+
+## Monitoring and Logging
+
+### Error Metrics Collection
+
+Collect error metrics for monitoring and debugging.
+
+```javascript
+class ErrorMetrics {
+  constructor() {
+    this.metrics = {
+      connectionErrors: 0,
+      authenticationErrors: 0,
+      subscriptionErrors: 0,
+      reconnectionAttempts: 0,
+      successfulReconnections: 0
+    };
+  }
+  
+  incrementMetric(metricName) {
+    if (this.metrics.hasOwnProperty(metricName)) {
+      this.metrics[metricName]++;
+    }
+  }
+  
+  getMetrics() {
+    return { ...this.metrics };
+  }
+  
+  resetMetrics() {
+    Object.keys(this.metrics).forEach(key => {
+      this.metrics[key] = 0;
+    });
+  }
+  
+  logMetrics() {
+    console.log('WebSocket Error Metrics:', this.metrics);
+  }
+}
+
+// Usage
+const errorMetrics = new ErrorMetrics();
+
+socket.on('connect_error', () => {
+  errorMetrics.incrementMetric('connectionErrors');
+});
+
+socket.on('news:error', () => {
+  errorMetrics.incrementMetric('authenticationErrors');
+});
+
+socket.on('reconnect_attempt', () => {
+  errorMetrics.incrementMetric('reconnectionAttempts');
+});
+
+socket.on('reconnect', () => {
+  errorMetrics.incrementMetric('successfulReconnections');
+});
+
+// Log metrics periodically
+setInterval(() => {
+  errorMetrics.logMetrics();
+}, 300000); // Every 5 minutes
+```
+
+## Best Practices
+
+**Error Classification**
+- Categorize errors by type (transient vs permanent)
+- Implement different retry strategies for different error types
+- Log errors with sufficient context for debugging
+
+**Recovery Strategies**
+- Use exponential backoff for reconnection attempts
+- Implement circuit breaker pattern for cascading failures
+- Provide fallback mechanisms when WebSocket fails
+
+**User Experience**
+- Display clear error messages and recovery instructions
+- Show connection status indicators
+- Provide manual retry options for users
+
+**Monitoring**
+- Collect error metrics and connection statistics
+- Set up alerts for high error rates
+- Monitor reconnection success rates

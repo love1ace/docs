@@ -1,0 +1,177 @@
+---
+title: "Error Codes"
+description: "News WebSocket error codes and handling"
+---
+
+## Error Response Format
+
+All news errors follow a consistent structure with detailed information for debugging:
+
+```json
+{
+  "code": "SUBSCRIPTION_FAILED",
+  "message": "Minimum importance must be between 0-10",
+  "details": {
+    "field": "minImportance",
+    "value": 15,
+    "allowedRange": "0-10"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+## News Subscription Error Codes
+
+<Warning>
+These errors are specific to news subscription operations and should be handled appropriately in your application.
+</Warning>
+
+### Official WebSocket Error Codes
+
+Based on the official API documentation, these are the only WebSocket error codes:
+
+| Error Code | Description | Action |
+|:-----------|:------------|:-------|
+| `AUTHENTICATION_FAILED` | API key authentication failed | Check API key |
+| `NOT_AUTHENTICATED` | Client not authenticated, reconnection required | Reconnect |
+| `SUBSCRIPTION_FAILED` | Subscription setup failed | Check parameters |
+| `WEBSOCKET_NOT_SUPPORTED` | WebSocket not available on current plan | Upgrade plan |
+
+## Error Handling Strategy
+
+```javascript
+socket.on('news:error', (error) => {
+  console.error(`[${error.code}] ${error.message}`);
+  
+  switch (error.code) {
+    case 'AUTHENTICATION_FAILED':
+      handleAuthFailed(error);
+      break;
+    case 'NOT_AUTHENTICATED':
+      handleNotAuthenticated(error);
+      break;
+    case 'SUBSCRIPTION_FAILED':
+      handleSubscriptionFailed(error);
+      break;
+    case 'WEBSOCKET_NOT_SUPPORTED':
+      handleWebSocketNotSupported(error);
+      break;
+    default:
+      handleUnknownError(error);
+  }
+});
+```
+
+## Implementation Examples
+
+### Authentication Error Handling
+
+```javascript
+function handleAuthFailed(error) {
+  console.error('Authentication failed:', error.message);
+  
+  // Check API key format
+  if (!byul_v2_your_api_key?.startsWith('byul_v2_')) {
+    console.error('Invalid API key format. Must start with byul_v2_');
+  }
+  
+  // Disconnect and require re-authentication
+  socket.disconnect();
+}
+```
+
+### Reconnection for Lost Authentication
+
+```javascript
+function handleNotAuthenticated(error) {
+  console.warn('Authentication lost:', error.message);
+  
+  // Attempt reconnection with authentication
+  socket.disconnect();
+  
+  setTimeout(() => {
+    socket.connect();
+  }, 2000);
+}
+```
+
+## Error Details by Code
+
+### AUTHENTICATION_FAILED
+**Cause**: API key authentication failed
+**Common Issues**:
+- Invalid API key format (must start with `byul_v2_`)
+- API key doesn't exist
+- API key has been revoked
+
+**Solution**: Verify API key from dashboard
+
+### NOT_AUTHENTICATED
+**Cause**: Client not authenticated, reconnection required
+**Common Issues**:
+- Connection dropped during authentication
+- Session expired
+- Authentication state lost
+
+**Solution**: Reconnect with valid API key
+
+### SUBSCRIPTION_FAILED
+**Cause**: News subscription setup failed
+**Common Issues**:
+- Invalid `minImportance` value (must be 0-10)
+- Invalid `limit` value (must be 1-100)
+- Invalid subscription parameters
+
+**Solution**: Validate parameters before subscribing
+
+### WEBSOCKET_NOT_SUPPORTED
+**Cause**: WebSocket not available on current plan
+**Affected Plans**: Test (Free), Starter ($19/month)
+**Solution**: Upgrade to Pro ($99/month) or Enterprise plan
+
+## Client-Side Validation
+
+```javascript
+class SubscriptionValidator {
+  static validate(params) {
+    const errors = [];
+    
+    if (params.minImportance && (params.minImportance < 0 || params.minImportance > 10)) {
+      errors.push('minImportance must be between 0 and 10');
+    }
+    
+    if (params.limit && (params.limit < 1 || params.limit > 100)) {
+      errors.push('limit must be between 1 and 100');
+    }
+    
+    return errors;
+  }
+}
+
+// Usage
+const params = { minImportance: 7, limit: 20 };
+const validationErrors = SubscriptionValidator.validate(params);
+
+if (validationErrors.length === 0) {
+  socket.emit('news:subscribe', params);
+} else {
+  console.error('Validation failed:', validationErrors);
+}
+```
+
+## Best Practices
+
+**Error Logging**
+- Log all errors with full context for debugging
+- Include timestamp and user session information
+- Monitor error rates and patterns
+
+**User Experience**
+- Provide clear, actionable error messages
+- Show suggestions when available (e.g., symbol suggestions)
+- Implement graceful degradation for non-critical errors
+
+**Error Recovery**
+- Implement automatic retry for transient errors
+- Respect rate limits and retry-after headers
+- Clean up failed subscriptions to prevent limit issues

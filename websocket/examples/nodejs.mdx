@@ -1,0 +1,151 @@
+---
+title: "Node.js"
+description: "Simple Node.js examples for WebSocket news integration"
+icon: "node-js"
+---
+
+## Basic Connection
+
+```javascript
+const { io } = require('socket.io-client');
+
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: process.env.BYUL_API_KEY }
+});
+
+socket.on('connect', () => {
+  console.log('Connected to Byul AI');
+  
+  socket.emit('news:subscribe', {
+    minImportance: 7
+  });
+});
+
+socket.on('news:data', (response) => {
+  const { data } = response;
+  const { news } = data;
+  
+  news.forEach(article => {
+    console.log(`${article.title} (${article.importanceScore}/10)`);
+  });
+});
+```
+
+## With Express Server
+
+```javascript
+const express = require('express');
+const { io } = require('socket.io-client');
+
+const app = express();
+const byulSocket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: process.env.BYUL_API_KEY }
+});
+
+// Store latest news
+let latestNews = [];
+
+byulSocket.on('connect', () => {
+  byulSocket.emit('news:subscribe', { minImportance: 6 });
+});
+
+byulSocket.on('news:data', (response) => {
+  const { data } = response;
+  const { news } = data;
+  latestNews = [...news, ...latestNews].slice(0, 50);
+});
+
+// API endpoint
+app.get('/api/news', (req, res) => {
+  res.json(latestNews);
+});
+
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});
+```
+
+## Error Handling
+
+```javascript
+const { io } = require('socket.io-client');
+
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: process.env.BYUL_API_KEY },
+  reconnection: true,
+  reconnectionAttempts: 5
+});
+
+socket.on('connect', () => {
+  console.log('Connected');
+  socket.emit('news:subscribe', { minImportance: 7 });
+});
+
+socket.on('disconnect', () => {
+  console.log('Disconnected');
+});
+
+socket.on('news:error', (error) => {
+  console.error('Auth failed:', error.message);
+});
+
+socket.on('news:error', (error) => {
+  console.error('News error:', error.message);
+});
+
+socket.on('news:data', (articles) => {
+  console.log(`Received ${articles.length} articles`);
+});
+```
+
+## Environment Setup
+
+**package.json**
+```json
+{
+  "name": "byul-websocket-client",
+  "version": "1.0.0",
+  "dependencies": {
+    "socket.io-client": "^4.7.0",
+    "express": "^4.18.0"
+  }
+}
+```
+
+**Install and run**
+```bash
+npm install
+BYUL_API_KEY=your_api_key node app.js
+```
+
+## Portfolio Tracking
+
+```javascript
+const { io } = require('socket.io-client');
+
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: byul_v2_your_api_key }
+});
+
+const portfolio = ['AAPL', 'GOOGL', 'MSFT'];
+
+socket.on('connect', () => {
+  // Subscribe to portfolio news
+  portfolio.forEach(symbol => {
+    socket.emit('news:subscribe', {
+      symbol,
+      minImportance: 6
+    });
+  });
+});
+
+socket.on('news:data', (articles) => {
+  articles.forEach(article => {
+    if (portfolio.includes(article.symbol)) {
+      console.log(`${article.symbol}: ${article.title}`);
+      console.log(`   Importance: ${article.importance}/10`);
+      console.log(`   URL: ${article.url}\n`);
+    }
+  });
+});
+```

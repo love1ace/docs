@@ -1,0 +1,227 @@
+---
+title: "Authentication"
+description: "API key authentication methods for WebSocket connections"
+---
+
+## API Key Requirements
+
+<Info>
+WebSocket usage requires **Pro Plan** or **Enterprise Plan** subscription. See [API Overview](/websocket/introduction#plan-requirements) for detailed plan comparison.
+</Info>
+
+### API Key Format
+
+- API keys must start with the `byul_v2_` prefix
+- Example: `byul_v2_1234567890abcdef`
+
+### API Key Generation
+
+1. Login to [Byul.ai Dashboard](https://www.byul.ai/dashboard)
+2. Navigate to API Keys section
+3. Click "Generate New API Key"
+4. Verify Pro or Enterprise plan subscription
+
+## Authentication Methods
+
+### Socket.IO Client Authentication
+
+```javascript
+import { io } from 'socket.io-client';
+
+// Multiple authentication methods supported
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: {
+    apiKey: process.env.BYUL_API_KEY,
+    token: process.env.BYUL_API_KEY
+  },
+  query: {
+    api_key: process.env.BYUL_API_KEY
+  },
+  extraHeaders: {
+    'X-API-Key': process.env.BYUL_API_KEY,
+    'Authorization': `Bearer ${process.env.BYUL_API_KEY}`
+  },
+  transports: ['websocket', 'polling'],
+  secure: true
+});
+```
+
+### Native WebSocket Authentication
+
+```javascript
+const ws = new WebSocket('wss://api.byul.ai/news-v2', [], {
+  headers: {
+    'Authorization': `Bearer ${process.env.BYUL_API_KEY}`
+  }
+});
+```
+
+## Authentication Events
+
+### Authentication Success
+
+When the API key is valid during connection, you will receive the `auth:success` event.
+
+```javascript
+socket.on('auth:success', (data) => {
+  console.log('Authentication successful');
+  console.log('Plan:', data.plan); // "pro" or "enterprise"
+  console.log('Limits:', data.limits);
+  
+  // Now you can subscribe to news
+  socket.emit('news:subscribe', {
+    minImportance: 5
+  });
+});
+```
+
+**Response Example:**
+```json
+{
+  "message": "V2 WebSocket authentication successful",
+  "user": {
+    "firebase_uid": "abc123...",
+    "email": "user@example.com",
+    "plan": "pro"
+  }
+}
+```
+
+### Authentication Failure
+
+If the API key is invalid or lacks permissions, you will receive authentication errors through the `news:error` event.
+
+```javascript
+socket.on('news:error', (error) => {
+  if (error.code === 'AUTHENTICATION_FAILED') {
+    console.error('Authentication failed:', error.message);
+  }
+});
+```
+
+**Error Response Example:**
+```json
+{
+  "message": "Invalid API key",
+  "code": "INVALID_API_KEY",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+## Authentication Error Codes
+
+<Warning>
+Authentication errors prevent WebSocket connection establishment. Resolve these before attempting to connect.
+</Warning>
+
+| Error Code | Description | Resolution |
+|:-----------|:------------|:-----------|
+| `AUTHENTICATION_FAILED` | API key authentication failed | Verify API key format and validity |
+| `NOT_AUTHENTICATED` | Client not authenticated, reconnection required | Reconnect with valid API key |
+| `WEBSOCKET_NOT_SUPPORTED` | WebSocket not available on current plan | Upgrade to Pro or Enterprise plan |
+
+### Error Details
+
+**AUTHENTICATION_FAILED**
+- **Cause**: API key format incorrect or key doesn't exist
+- **Common Issues**: Missing `byul_v2_` prefix, typos, deleted keys
+- **Resolution**: Regenerate API key from dashboard
+
+**NOT_AUTHENTICATED**
+- **Cause**: Client not authenticated, reconnection required
+- **Common Issues**: Connection dropped during authentication, session expired
+- **Resolution**: Reconnect with valid API key
+
+**WEBSOCKET_NOT_SUPPORTED** 
+- **Cause**: Using Test (Free) or Starter plan
+- **Affected Plans**: Test, Starter ($19/month)
+- **Resolution**: Upgrade to Pro ($99/month) or Enterprise
+
+## Authentication Troubleshooting
+
+### 1. API Key Validation
+```javascript
+// Validate API key format
+function validateApiKey(apiKey) {
+  if (!apiKey.startsWith('byul_v2_')) {
+    console.error('API key must start with byul_v2_ prefix');
+    return false;
+  }
+  
+  if (apiKey.length < 20) {
+    console.error('API key length is too short');
+    return false;
+  }
+  
+  return true;
+}
+
+const apiKey = process.env.BYUL_API_KEY;
+if (validateApiKey(apiKey)) {
+  // Attempt WebSocket connection
+}
+```
+
+### 2. Connection Status Monitoring
+```javascript
+socket.on('connect', () => {
+  console.log('WebSocket connected');
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Connection disconnected:', reason);
+  
+  if (reason === 'io server disconnect') {
+    // Server disconnected (authentication failure, etc.)
+    console.log('Server disconnected. Please check authentication.');
+  }
+});
+
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error.message);
+});
+```
+
+### 3. Re-authentication Handling
+```javascript
+socket.on('news:error', (error) => {
+  if (error.code === 'WEBSOCKET_NOT_SUPPORTED') {
+    // Plan upgrade required
+    window.location.href = 'https://www.byul.ai/pricing';
+  } else if (error.code === 'NOT_AUTHENTICATED') {
+    // Retry connection after delay
+    setTimeout(() => {
+      socket.connect();
+    }, 2000);
+  }
+});
+```
+
+## Security Best Practices
+
+<Warning>
+Never hardcode API keys in client-side code. Use server-side only or manage through environment variables.
+</Warning>
+
+### Environment Variables
+```javascript
+// Node.js environment
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: {
+    apiKey: process.env.BYUL_API_KEY
+  }
+});
+```
+
+### Proxy Server Implementation
+For client applications, it is recommended to configure proxy connections through a backend server instead of connecting directly to WebSocket.
+
+```javascript
+// Backend manages WebSocket connection
+const backendSocket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: process.env.BYUL_API_KEY }
+});
+
+// Client communicates with backend
+const clientSocket = io('ws://your-backend-server');
+```

@@ -1,0 +1,96 @@
+---
+title: "API Overview"
+description: "Real-time WebSocket connections for Byul AI News API"
+---
+
+## Key Features
+
+**Real-time Data Streaming**  
+News articles are delivered instantly as they occur, minimizing latency.
+
+**Efficient Connection**  
+Single persistent connection eliminates HTTP overhead for continuous data flow.
+
+**Bidirectional Communication**  
+Event-driven architecture enables real-time client-server interaction.
+
+## Endpoint
+
+```
+wss://api.byul.ai/news-v2
+```
+
+## Plan Requirements
+
+<Info>
+WebSocket connections require **Pro Plan** or **Enterprise Plan** subscription.
+</Info>
+
+| Plan | WebSocket Support | Concurrent Connections |
+|------|-------------------|------------------------|
+| Test (Free) | No | - |
+| Starter ($19/month) | No | - |
+| Pro ($99/month) | Yes | 10 |
+| Enterprise | Yes | 50 |
+
+## Supported Events
+
+### Client → Server
+
+- **`news:subscribe`** - Start news subscription
+- **`news:unsubscribe`** - Unsubscribe from specific topic
+- **`news:unsubscribe:all`** - Unsubscribe from all topics
+
+### Server → Client
+
+- **`auth:success`** - Authentication successful
+- **`news:data`** - Real-time news data
+- **`news:subscribed`** - Subscription confirmation
+- **`news:unsubscribed`** - Unsubscribe confirmation
+- **`news:error`** - News-related errors
+
+## Quick Start Example
+
+```javascript
+import { io } from 'socket.io-client';
+
+// Create WebSocket connection with multiple auth methods
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: {
+    apiKey: process.env.BYUL_API_KEY,
+    token: process.env.BYUL_API_KEY
+  },
+  query: {
+    api_key: process.env.BYUL_API_KEY
+  },
+  extraHeaders: {
+    'X-API-Key': process.env.BYUL_API_KEY,
+    'Authorization': `Bearer ${process.env.BYUL_API_KEY}`
+  }
+});
+
+// Subscribe to news and handle events
+socket.on('connect', () => {
+  socket.emit('news:subscribe', { minImportance: 7 });
+});
+
+socket.on('news:data', (response) => {
+  console.log(`Received ${response.data.news.length} news articles`);
+});
+```
+
+<Info>
+For detailed authentication setup, see the [Authentication](/websocket/authentication) guide.
+</Info>
+
+## Next Steps
+
+**Authentication Setup**  
+Learn how to authenticate WebSocket connections using API keys.
+
+**Connection Guide**  
+Configure stable and reliable WebSocket connections.
+
+**Event Handling**  
+Process various WebSocket events and manage subscriptions.
+

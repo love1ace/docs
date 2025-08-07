@@ -1,0 +1,371 @@
+---
+title: "React"
+description: "Simple React examples for WebSocket news integration"
+icon: "react"
+---
+
+## Basic Hook
+
+```jsx
+import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+function useByulNews() {
+  const [news, setNews] = useState([]);
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    const socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
+    });
+
+    socket.on('connect', () => {
+      setConnected(true);
+      socket.emit('news:subscribe', { minImportance: 7 });
+    });
+
+    socket.on('disconnect', () => {
+      setConnected(false);
+    });
+
+    socket.on('news:data', (response) => {
+      const news = response.data.news;
+      setNews(prev => [...news, ...prev].slice(0, 50));
+    });
+
+    return () => socket.close();
+  }, []);
+
+  return { news, connected };
+}
+
+// Usage
+function NewsApp() {
+  const { news, connected } = useByulNews();
+
+  return (
+    <div>
+      <h1>News Feed {connected ? 'Connected' : 'Disconnected'}</h1>
+      {news.map(article => (
+        <div key={article._id} style={{ border: '1px solid #ddd', padding: 10, margin: 10 }}>
+          <h3>{article.title}</h3>
+          <p>Importance: {article.importanceScore}/10</p>
+          <p>Symbols: {article.symbols?.join(', ') || 'General'}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## News Dashboard
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+function NewsDashboard() {
+  const [articles, setArticles] = useState([]);
+  const [status, setStatus] = useState('disconnected');
+
+  useEffect(() => {
+    const socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
+    });
+
+    socket.on('connect', () => {
+      setStatus('connected');
+      socket.emit('news:subscribe', { minImportance: 6 });
+    });
+
+    socket.on('disconnect', () => {
+      setStatus('disconnected');
+    });
+
+    socket.on('news:data', (response) => {
+      const news = response.data.news;
+      setArticles(prev => [...news, ...prev].slice(0, 100));
+    });
+
+    return () => socket.close();
+  }, []);
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
+        <h1>Byul AI News</h1>
+        <div style={{ 
+          padding: '5px 10px', 
+          borderRadius: '5px',
+          backgroundColor: status === 'connected' ? '#d4edda' : '#f8d7da',
+          color: status === 'connected' ? '#155724' : '#721c24'
+        }}>
+          {status === 'connected' ? 'Connected' : 'Disconnected'}
+        </div>
+      </div>
+
+      {articles.map(article => (
+        <div key={article._id} style={{
+          border: '1px solid #e0e0e0',
+          borderRadius: '8px',
+          padding: '15px',
+          marginBottom: '15px',
+          backgroundColor: 'white'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+            <h3 style={{ margin: '0 0 10px 0', flex: 1 }}>{article.title}</h3>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              {article.symbols && article.symbols.length > 0 && (
+                <span style={{
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  padding: '2px 8px',
+                  borderRadius: '3px',
+                  fontSize: '0.8em'
+                }}>
+                  {article.symbols.join(', ')}
+                </span>
+              )}
+              <span style={{
+                backgroundColor: '#f8f9fa',
+                padding: '2px 8px',
+                borderRadius: '3px',
+                fontSize: '0.8em',
+                fontWeight: 'bold'
+              }}>
+                {article.importanceScore}/10
+              </span>
+            </div>
+          </div>
+          
+          <p style={{ color: '#666', fontSize: '0.9em', margin: '10px 0' }}>
+            {new Date(article.date).toLocaleString()}
+          </p>
+          
+          <a 
+            href={article.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ color: '#007bff', textDecoration: 'none' }}
+          >
+            Read more →
+          </a>
+        </div>
+      ))}
+
+      {articles.length === 0 && (
+        <div style={{ textAlign: 'center', color: '#666', padding: '50px' }}>
+          Waiting for news updates...
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default NewsDashboard;
+```
+
+## Portfolio Tracker
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+function PortfolioTracker() {
+  const [portfolio, setPortfolio] = useState(['AAPL', 'GOOGL', 'MSFT']);
+  const [news, setNews] = useState([]);
+  const [newSymbol, setNewSymbol] = useState('');
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    const newSocket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
+    });
+
+    newSocket.on('connect', () => {
+      // Subscribe to portfolio news
+      portfolio.forEach(symbol => {
+        newSocket.emit('news:subscribe', { 
+          symbol, 
+          minImportance: 6 
+        });
+      });
+    });
+
+    newSocket.on('news:data', (response) => {
+      const news = response.data.news;
+      const portfolioNews = news.filter(article => 
+        article.symbols && article.symbols.some(symbol => portfolio.includes(symbol))
+      );
+      setNews(prev => [...portfolioNews, ...prev].slice(0, 50));
+    });
+
+    setSocket(newSocket);
+    return () => newSocket.close();
+  }, [portfolio]);
+
+  const addSymbol = () => {
+    if (newSymbol && !portfolio.includes(newSymbol.toUpperCase())) {
+      const symbol = newSymbol.toUpperCase();
+      setPortfolio(prev => [...prev, symbol]);
+      
+      if (socket) {
+        socket.emit('news:subscribe', { symbol, minImportance: 6 });
+      }
+      
+      setNewSymbol('');
+    }
+  };
+
+  const removeSymbol = (symbol) => {
+    setPortfolio(prev => prev.filter(s => s !== symbol));
+    if (socket) {
+      socket.emit('news:unsubscribe', { symbol });
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <h1>Portfolio News Tracker</h1>
+
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Portfolio ({portfolio.length} symbols)</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+          {portfolio.map(symbol => (
+            <div key={symbol} style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#f8f9fa',
+              padding: '5px 10px',
+              borderRadius: '5px',
+              border: '1px solid #dee2e6'
+            }}>
+              {symbol}
+              <button 
+                onClick={() => removeSymbol(symbol)}
+                style={{
+                  marginLeft: '5px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#dc3545'
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input
+            type="text"
+            placeholder="Add symbol (e.g., TSLA)"
+            value={newSymbol}
+            onChange={(e) => setNewSymbol(e.target.value)}
+            style={{ padding: '5px', borderRadius: '3px', border: '1px solid #ddd' }}
+          />
+          <button onClick={addSymbol} style={{
+            padding: '5px 15px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '3px',
+            cursor: 'pointer'
+          }}>
+            Add
+          </button>
+        </div>
+      </div>
+
+      <h3>Recent News ({news.length})</h3>
+      {news.map(article => (
+        <div key={article._id} style={{
+          border: '1px solid #e0e0e0',
+          borderLeft: '4px solid #007bff',
+          padding: '15px',
+          marginBottom: '10px',
+          backgroundColor: 'white'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <h4 style={{ margin: 0 }}>{article.symbols?.join(', ') || 'General'}</h4>
+            <span style={{ fontSize: '0.8em', color: '#666' }}>
+              {article.importanceScore}/10
+            </span>
+          </div>
+          <h5 style={{ margin: '5px 0' }}>{article.title}</h5>
+          <p style={{ fontSize: '0.8em', color: '#666' }}>
+            {new Date(article.date).toLocaleString()}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default PortfolioTracker;
+```
+
+## Environment Setup
+
+**Installation**
+```bash
+npm install socket.io-client
+```
+
+**Environment Variables**
+Create `.env` file:
+```env
+REACT_APP_BYUL_API_KEY=byul_v2_your_api_key
+```
+
+**Error Handling Hook**
+```jsx
+import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+function useByulNewsWithErrors() {
+  const [news, setNews] = useState([]);
+  const [status, setStatus] = useState('disconnected');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
+    });
+
+    socket.on('connect', () => {
+      setStatus('connected');
+      setError(null);
+      socket.emit('news:subscribe', { minImportance: 7 });
+    });
+
+    socket.on('disconnect', () => {
+      setStatus('disconnected');
+    });
+
+    socket.on('news:error', (err) => {
+      setError(`Authentication failed: ${err.message}`);
+      setStatus('error');
+    });
+
+    socket.on('news:error', (err) => {
+      setError(`News error: ${err.message}`);
+    });
+
+    socket.on('news:data', (response) => {
+      const news = response.data.news;
+      setNews(prev => [...news, ...prev].slice(0, 50));
+    });
+
+    return () => socket.close();
+  }, []);
+
+  return { news, status, error };
+}
+```

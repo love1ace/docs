@@ -1,0 +1,250 @@
+---
+title: "Responses"
+description: "WebSocket response formats and event structures"
+---
+
+## Authentication Response
+
+Receive confirmation after successful authentication.
+
+```javascript
+socket.on('auth:success', (data) => {
+  console.log('Authentication successful:', data);
+});
+```
+
+**Response Structure:**
+```json
+{
+  "message": "V2 WebSocket authentication successful",
+  "user": {
+    "firebase_uid": "abc123...",
+    "email": "user@example.com",
+    "plan": "pro"
+  }
+}
+```
+
+**Fields:**
+- `message` - Success confirmation message
+- `user` - User information object
+  - `firebase_uid` - User's Firebase UID
+  - `email` - User's email address
+  - `plan` - Current subscription plan
+
+## News Data Response
+
+Receive real-time news articles through the `news:data` event.
+
+```javascript
+socket.on('news:data', (response) => {
+  console.log('New articles:', response);
+});
+```
+
+**Response Structure:**
+```json
+{
+  "type": "news",
+  "data": {
+    "news": [
+      {
+        "_id": "67850d7b0123456789abcde1",
+        "title": "Breaking: Fed Issues Emergency Statement",
+        "englishTitle": "Breaking: Fed Issues Emergency Statement",
+        "koTitle": "속보: 연준 긴급성명 발표",
+        "url": "https://www.byul.ai/news/fed-emergency-statement",
+        "date": "2024-01-15T14:30:00.000Z",
+        "createdAt": "2024-01-15T14:30:00.000Z",
+        "source": "byul.ai",
+        "timestamp": 1705415400,
+        "importanceScore": 10,
+        "category": "fed",
+        "symbols": [],
+        "sentiment": "neutral"
+      }
+    ],
+    "hasMore": false,
+    "nextCursor": null,
+    "total": 1
+  },
+  "timestamp": "2024-01-15T14:30:15Z",
+  "isRealTimeUpdate": true
+}
+```
+
+**Response Fields:**
+- `type` - Event type ("news")
+- `data` - News data object containing `news` array, `hasMore`, `nextCursor`, `total`
+- `timestamp` - Server transmission time
+- `isRealTimeUpdate` - Whether this is a real-time update
+
+## Connection Status Response
+
+Monitor connection health and usage statistics.
+
+```javascript
+socket.on('connection:status', (status) => {
+  console.log('Connection status:', status);
+});
+```
+
+**Response Structure:**
+```json
+{
+  "status": "connected",
+  "connectionsUsed": 1,
+  "maxConnections": 10,
+  "plan": "pro",
+  "rateLimit": {
+    "remaining": 119,
+    "resetTime": "2024-01-15T15:00:00Z"
+  }
+}
+```
+
+**Status Fields:**
+- `status` - Connection state (`connected`, `disconnected`, `limited`)
+- `connectionsUsed` - Current active connections
+- `maxConnections` - Plan connection limit
+- `plan` - Subscription plan type
+- `rateLimit` - Rate limiting information
+
+## Subscription Confirmation
+
+Receive confirmation when subscriptions are activated.
+
+```javascript
+socket.on('news:subscribed', (confirmation) => {
+  console.log('Subscription confirmed:', confirmation);
+});
+```
+
+**Response Structure:**
+```json
+{
+  "type": "news",
+  "params": {
+    "limit": 20,
+    "minImportance": 5,
+    "symbol": "AAPL"
+  },
+  "message": "Successfully subscribed to news feed - 실시간 업데이트 활성화됨"
+}
+```
+
+**Confirmation Fields:**
+- `type` - Subscription type
+- `params` - Applied filter settings
+- `message` - Confirmation message
+
+## Batch News Response
+
+Large news updates may be delivered as batches.
+
+```javascript
+socket.on('news:data', (batch) => {
+  console.log(`Batch update: ${batch.articles.length} articles`);
+});
+```
+
+**Batch Structure:**
+```json
+{
+  "type": "news_batch",
+  "articles": [
+    // Array of article objects
+  ],
+  "batchId": "batch_20240115_143015",
+  "totalArticles": 5,
+  "timestamp": "2024-01-15T14:30:15Z",
+  "reason": "high_volume"
+}
+```
+
+**Batch Fields:**
+- `batchId` - Unique batch identifier
+- `totalArticles` - Total articles in batch
+- `reason` - Batching reason (`high_volume`, `scheduled`)
+
+## Ping Response
+
+Server may send ping messages to check connection health.
+
+```javascript
+socket.on('ping', (data) => {
+  console.log('Ping received:', data.timestamp);
+  
+  // Respond with pong
+  socket.emit('pong', {
+    timestamp: Date.now()
+  });
+});
+```
+
+**Ping Structure:**
+```json
+{
+  "timestamp": "2024-01-15T14:30:00Z",
+  "serverId": "ws-server-01"
+}
+```
+
+## Response Handling Best Practices
+
+### Type Checking
+
+Always validate response structure:
+
+```javascript
+socket.on('news:data', (response) => {
+  if (response.type && response.data && response.data.news && Array.isArray(response.data.news)) {
+    response.data.news.forEach(article => {
+      if (article._id && article.title) {
+        processArticle(article);
+      }
+    });
+  }
+});
+```
+
+### Error Handling
+
+Handle malformed responses gracefully:
+
+```javascript
+socket.on('news:data', (response) => {
+  try {
+    const { data, timestamp } = response;
+    const { news } = data;
+    
+    if (!news || !Array.isArray(news)) {
+      console.warn('Invalid news array received');
+      return;
+    }
+    
+    console.log(`Processing ${news.length} articles`);
+    news.forEach(processArticle);
+    
+  } catch (error) {
+    console.error('Error processing news response:', error);
+  }
+});
+```
+
+### Response Logging
+
+Log responses for debugging:
+
+```javascript
+const logResponse = (eventName, data) => {
+  console.log(`[${new Date().toISOString()}] ${eventName}:`, {
+    type: data.type || 'unknown',
+    count: data.data?.news?.length || data.data?.total || 0,
+    timestamp: data.timestamp
+  });
+};
+
+socket.on('news:data', (data) => logResponse('news:data', data));
+socket.on('auth:success', (data) => logResponse('auth:success', data));
+```

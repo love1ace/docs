@@ -1,0 +1,225 @@
+---
+title: "Python"
+description: "Simple Python examples for WebSocket news integration"
+icon: "python"
+---
+
+## Basic Connection
+
+```python
+import socketio
+import asyncio
+
+sio = socketio.AsyncClient()
+
+@sio.event
+async def connect():
+    print("Connected to Byul AI")
+    
+    # Subscribe to news
+    await sio.emit('news:subscribe', {
+        'minImportance': 7
+    })
+
+@sio.on('news:data')
+async def handle_news(response):
+    news = response['data']['news']
+    for article in news:
+        print(f"{article['title']} ({article['importanceScore']}/10)")
+
+async def main():
+    await sio.connect('wss://api.byul.ai/news-v2', 
+                      auth={'apiKey': os.getenv('BYUL_API_KEY')})
+    await sio.wait()
+
+asyncio.run(main())
+```
+
+## With Flask API
+
+```python
+from flask import Flask, jsonify
+import socketio
+import threading
+
+app = Flask(__name__)
+sio = socketio.AsyncClient()
+latest_news = []
+
+@sio.event
+async def connect():
+    await sio.emit('news:subscribe', {'minImportance': 6})
+
+@sio.on('news:data')  
+async def handle_news(response):
+    global latest_news
+    news = response['data']['news']
+    latest_news = news + latest_news[:50]
+
+@app.route('/api/news')
+def get_news():
+    return jsonify(latest_news)
+
+def start_websocket():
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(
+        sio.connect('wss://api.byul.ai/news-v2',
+                   auth={'apiKey': os.getenv('BYUL_API_KEY')})
+    )
+
+# Start WebSocket in background
+threading.Thread(target=start_websocket, daemon=True).start()
+
+if __name__ == '__main__':
+    app.run(port=5000)
+```
+
+## Error Handling
+
+```python
+import socketio
+import asyncio
+
+sio = socketio.AsyncClient()
+
+@sio.event
+async def connect():
+    print("Connected")
+    await sio.emit('news:subscribe', {'minImportance': 7})
+
+@sio.event
+async def disconnect():
+    print("Disconnected")
+
+@sio.on('news:error')
+async def auth_error(error):
+    print(f"Auth failed: {error['message']}")
+
+@sio.on('news:error')
+async def news_error(error):
+    print(f"News error: {error['message']}")
+
+@sio.on('news:data')
+async def handle_news(response):
+    news = response['data']['news']
+    print(f"Received {len(news)} articles")
+
+async def main():
+    try:
+        await sio.connect('wss://api.byul.ai/news-v2',
+                         auth={'apiKey': os.getenv('BYUL_API_KEY')})
+        await sio.wait()
+    except Exception as e:
+        print(f"Connection failed: {e}")
+
+asyncio.run(main())
+```
+
+## Environment Setup
+
+**requirements.txt**
+```txt
+python-socketio[asyncio-client]>=5.8.0
+flask>=2.3.0
+aiohttp>=3.8.0
+```
+
+**Install and run**
+```bash
+pip install -r requirements.txt
+BYUL_API_KEY=your_api_key python app.py
+```
+
+## Portfolio Tracking
+
+```python
+import socketio
+import asyncio
+import os
+
+sio = socketio.AsyncClient()
+portfolio = ['AAPL', 'GOOGL', 'MSFT']
+
+@sio.event
+async def connect():
+    # Subscribe to portfolio news
+    for symbol in portfolio:
+        await sio.emit('news:subscribe', {
+            'symbol': symbol,
+            'minImportance': 6
+        })
+
+@sio.on('news:data')
+async def handle_news(response):
+    news = response['data']['news']
+    for article in news:
+        if article.get('symbols') and any(sym in portfolio for sym in article['symbols']):
+            symbols_str = ', '.join(article['symbols'])
+            print(f"{symbols_str}: {article['title']}")
+            print(f"   Importance: {article['importanceScore']}/10")
+            print(f"   URL: {article['url']}\n")
+
+async def main():
+    api_key = os.getenv('BYUL_API_KEY')
+    await sio.connect('wss://api.byul.ai/news-v2', 
+                      auth={'apiKey': api_key})
+    await sio.wait()
+
+asyncio.run(main())
+```
+
+## Data Processing
+
+```python
+import socketio
+import asyncio
+import pandas as pd
+from datetime import datetime
+
+sio = socketio.AsyncClient()
+news_data = []
+
+@sio.event
+async def connect():
+    await sio.emit('news:subscribe', {'minImportance': 7})
+
+@sio.on('news:data')
+async def handle_news(response):
+    global news_data
+    news = response['data']['news']
+    
+    # Add to dataset
+    for article in news:
+        news_data.append({
+            'title': article['title'],
+            'symbols': article.get('symbols', []),
+            'importanceScore': article['importanceScore'],
+            'timestamp': datetime.now()
+        })
+    
+    # Keep only last 1000 articles
+    news_data = news_data[-1000:]
+    
+    # Create DataFrame for analysis
+    df = pd.DataFrame(news_data)
+    
+    # Simple analytics
+    if len(df) > 10:
+        avg_importance = df['importanceScore'].mean()
+        # Flatten symbols list for counting
+        all_symbols = [sym for symbols in df['symbols'] if symbols for sym in symbols]
+        if all_symbols:
+            import pandas as pd
+            top_symbols = pd.Series(all_symbols).value_counts().head(5)
+            print(f"Average importance: {avg_importance:.1f}")
+            print("Top symbols:", top_symbols.to_dict())
+
+async def main():
+    await sio.connect('wss://api.byul.ai/news-v2',
+                      auth={'apiKey': os.getenv('BYUL_API_KEY')})
+    await sio.wait()
+
+asyncio.run(main())
+```

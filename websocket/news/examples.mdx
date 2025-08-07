@@ -1,0 +1,796 @@
+---
+title: "Examples"
+description: "Practical examples and implementation patterns for news WebSocket integration"
+---
+
+# News Examples
+
+Explore practical implementation examples for integrating news WebSocket functionality into your applications.
+
+## Basic News Subscription
+
+### Simple News Stream
+
+Basic example to receive and display real-time news updates.
+
+```javascript
+import { io } from 'socket.io-client';
+
+class NewsStream {
+  constructor(apiKey) {
+    this.socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey }
+    });
+    
+    this.setupEventHandlers();
+  }
+  
+  setupEventHandlers() {
+    this.socket.on('connect', () => {
+      console.log('Connected to news stream');
+      this.subscribeToNews();
+    });
+    
+    this.socket.on('news:data', (response) => {
+      const articles = response.data.news;
+      this.handleNewsUpdate(articles);
+    });
+    
+    this.socket.on('news:error', (error) => {
+      console.error('News error:', error);
+    });
+  }
+  
+  subscribeToNews() {
+    // Subscribe to high-importance news
+    this.socket.emit('news:subscribe', {
+      minImportance: 7,
+      limit: 10
+    });
+  }
+  
+  handleNewsUpdate(articles) {
+    articles.forEach(article => {
+      this.displayArticle(article);
+    });
+  }
+  
+  displayArticle(article) {
+    console.log(`[${article.importanceScore}/10] ${article.title}`);
+    console.log(`Symbols: ${article.symbols?.join(', ') || 'General'}`);
+    console.log(`Published: ${new Date(article.date).toLocaleString()}`);
+    console.log('---');
+  }
+}
+
+// Usage
+const newsStream = new NewsStream(process.env.BYUL_API_KEY);
+```
+
+### Multi-Symbol Tracking
+
+Track news for multiple stock symbols simultaneously.
+
+```javascript
+class MultiSymbolNewsTracker {
+  constructor(apiKey) {
+    this.socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey }
+    });
+    
+    this.watchlist = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN'];
+    this.subscriptions = new Map();
+    
+    this.setupEventHandlers();
+  }
+  
+  setupEventHandlers() {
+    this.socket.on('connect', () => {
+      console.log('Connected to news tracker');
+      this.subscribeToWatchlist();
+    });
+    
+    this.socket.on('news:data', (response) => {
+      const articles = response.data.news;
+      this.processNewsArticles(articles);
+    });
+    
+    this.socket.on('news:subscribed', (confirmation) => {
+      console.log(`Subscribed to news feed:`, confirmation);
+    });
+  }
+  
+  subscribeToWatchlist() {
+    this.watchlist.forEach(symbol => {
+      this.socket.emit('news:subscribe', {
+        symbol,
+        minImportance: 6,
+      });
+    });
+  }
+  
+  processNewsArticles(articles) {
+    const newsAnalysis = this.analyzeNews(articles);
+    this.displayAnalysis(newsAnalysis);
+  }
+  
+  analyzeNews(articles) {
+    const analysis = {
+      totalArticles: articles.length,
+      bySymbol: {},
+      avgImportance: 0,
+      sentimentBreakdown: { positive: 0, negative: 0, neutral: 0 }
+    };
+    
+    let totalImportance = 0;
+    
+    articles.forEach(article => {
+      // Group by symbols
+      const symbols = article.symbols || ['General'];
+      symbols.forEach(symbol => {
+        if (!analysis.bySymbol[symbol]) {
+          analysis.bySymbol[symbol] = {
+            count: 0,
+            avgImportance: 0,
+            articles: []
+          };
+        }
+        
+        analysis.bySymbol[symbol].count++;
+        analysis.bySymbol[symbol].articles.push(article);
+      });
+      
+      totalImportance += article.importanceScore;
+      
+      // Sentiment analysis
+      if (article.sentiment === 'positive') {
+        analysis.sentimentBreakdown.positive++;
+      } else if (article.sentiment === 'negative') {
+        analysis.sentimentBreakdown.negative++;
+      } else {
+        analysis.sentimentBreakdown.neutral++;
+      }
+    });
+    
+    analysis.avgImportance = totalImportance / articles.length;
+    
+    // Calculate average importance per symbol
+    Object.keys(analysis.bySymbol).forEach(symbol => {
+      const symbolData = analysis.bySymbol[symbol];
+      const symbolImportance = symbolData.articles.reduce(
+        (sum, article) => sum + article.importanceScore, 0
+      );
+      symbolData.avgImportance = symbolImportance / symbolData.count;
+    });
+    
+    return analysis;
+  }
+  
+  displayAnalysis(analysis) {
+    console.log('\n📊 NEWS ANALYSIS UPDATE');
+    console.log('========================');
+    console.log(`Total Articles: ${analysis.totalArticles}`);
+    console.log(`Average Importance: ${analysis.avgImportance.toFixed(1)}/10`);
+    
+    console.log('\n📈 BY SYMBOL:');
+    Object.keys(analysis.bySymbol).forEach(symbol => {
+      const data = analysis.bySymbol[symbol];
+      console.log(`  ${symbol}: ${data.count} articles (avg importance: ${data.avgImportance.toFixed(1)})`);
+    });
+    
+    console.log('\n💭 SENTIMENT:');
+    console.log(`  Positive: ${analysis.sentimentBreakdown.positive}`);
+    console.log(`  Negative: ${analysis.sentimentBreakdown.negative}`);
+    console.log(`  Neutral: ${analysis.sentimentBreakdown.neutral}`);
+    console.log('========================\n');
+  }
+  
+  addSymbol(symbol) {
+    if (!this.watchlist.includes(symbol)) {
+      this.watchlist.push(symbol);
+      this.socket.emit('news:subscribe', {
+        symbol,
+        minImportance: 6,
+      });
+    }
+  }
+  
+  removeSymbol(symbol) {
+    const index = this.watchlist.indexOf(symbol);
+    if (index > -1) {
+      this.watchlist.splice(index, 1);
+      this.socket.emit('news:unsubscribe', { symbol });
+      this.subscriptions.delete(symbol);
+    }
+  }
+}
+
+// Usage
+const tracker = new MultiSymbolNewsTracker(process.env.BYUL_API_KEY);
+
+// Add/remove symbols dynamically
+setTimeout(() => {
+  tracker.addSymbol('NVDA');
+}, 10000);
+```
+
+## Advanced Implementation
+
+### News Dashboard with React
+
+Complete React component for displaying real-time news.
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+const NewsDashboard = () => {
+  const [articles, setArticles] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [socket, setSocket] = useState(null);
+  
+  useEffect(() => {
+    const newSocket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
+    });
+    
+    newSocket.on('connect', () => {
+      setConnectionStatus('connected');
+      // Subscribe to general news
+      newSocket.emit('news:subscribe', {
+        minImportance: 7,
+        limit: 20
+      });
+    });
+    
+    newSocket.on('disconnect', () => {
+      setConnectionStatus('disconnected');
+    });
+    
+    newSocket.on('news:data', (response) => {
+      const articles = response.data.news;
+      setArticles(prev => {
+        const combined = [...articles, ...prev];
+        // Keep only latest 100 articles
+        return combined.slice(0, 100);
+      });
+    });
+    
+    newSocket.on('news:subscribed', (confirmation) => {
+      setSubscriptions(prev => [...prev, confirmation]);
+    });
+    
+    setSocket(newSocket);
+    
+    return () => newSocket.close();
+  }, []);
+  
+  const subscribeToSymbol = (symbol) => {
+    if (socket) {
+      socket.emit('news:subscribe', {
+        symbol,
+        minImportance: 6
+      });
+    }
+  };
+  
+  const getImportanceColor = (importance) => {
+    if (importance >= 9) return 'text-red-600';
+    if (importance >= 7) return 'text-orange-600';
+    if (importance >= 5) return 'text-yellow-600';
+    return 'text-gray-600';
+  };
+  
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const published = new Date(timestamp);
+    const diffMs = now - published;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+    return published.toLocaleDateString();
+  };
+  
+  return (
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Real-time News Dashboard</h1>
+        <div className="flex items-center space-x-4">
+          <div className={`h-3 w-3 rounded-full ${
+            connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+          }`}></div>
+          <span className="text-sm text-gray-600 capitalize">{connectionStatus}</span>
+        </div>
+      </div>
+      
+      <div className="mb-6">
+        <div className="flex space-x-2">
+          {['AAPL', 'GOOGL', 'MSFT', 'TSLA'].map(symbol => (
+            <button
+              key={symbol}
+              onClick={() => subscribeToSymbol(symbol)}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Track {symbol}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="grid gap-4">
+        {articles.map(article => (
+          <div key={article._id} className="bg-white border rounded-lg p-4 shadow-sm">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-semibold flex-1">{article.title}</h3>
+              <div className="flex items-center space-x-2 ml-4">
+                {article.symbols && article.symbols.length > 0 && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                    {article.symbols.join(', ')}
+                  </span>
+                )}
+                <span className={`text-xs font-bold ${getImportanceColor(article.importanceScore)}`}>
+                  {article.importanceScore}/10
+                </span>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-3">{article.summary}</p>
+            
+            <div className="flex justify-between items-center text-sm text-gray-500">
+              <div className="flex items-center space-x-4">
+                <span>{formatTimeAgo(article.date)}</span>
+                {article.sentiment && (
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    article.sentiment === 'positive' ? 'bg-green-100 text-green-800' :
+                    article.sentiment === 'negative' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {article.sentiment}
+                  </span>
+                )}
+              </div>
+              
+              <a
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                Read More
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {articles.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Waiting for news updates...</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default NewsDashboard;
+```
+
+### Trading Alert System
+
+Automated system that generates trading alerts based on news importance and sentiment.
+
+```javascript
+class TradingAlertSystem {
+  constructor(apiKey) {
+    this.socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey }
+    });
+    
+    this.alertRules = new Map();
+    this.portfolio = new Set(); // User's portfolio symbols
+    this.alertHistory = [];
+    
+    this.setupEventHandlers();
+    this.setupDefaultRules();
+  }
+  
+  setupEventHandlers() {
+    this.socket.on('connect', () => {
+      console.log('Trading alert system connected');
+      this.subscribeToPortfolio();
+    });
+    
+    this.socket.on('news:data', (articles) => {
+      this.evaluateArticles(articles);
+    });
+  }
+  
+  setupDefaultRules() {
+    // High importance earnings news
+    this.addAlertRule('earnings_alert', {
+      minImportance: 8,
+      portfolioOnly: true,
+      action: 'WATCH'
+    });
+    
+    // Negative news with high importance
+    this.addAlertRule('negative_alert', {
+      sentimentThreshold: -0.5,
+      minImportance: 7,
+      portfolioOnly: true,
+      action: 'SELL_ALERT'
+    });
+    
+    // Positive merger/acquisition news
+    this.addAlertRule('merger_alert', {
+      sentimentThreshold: 0.3,
+      minImportance: 6,
+      portfolioOnly: false,
+      action: 'BUY_OPPORTUNITY'
+    });
+  }
+  
+  addAlertRule(name, rule) {
+    this.alertRules.set(name, {
+      ...rule,
+      created: Date.now(),
+      triggered: 0
+    });
+  }
+  
+  removeAlertRule(name) {
+    this.alertRules.delete(name);
+  }
+  
+  addToPortfolio(symbol) {
+    this.portfolio.add(symbol);
+    
+    // Subscribe to specific symbol news
+    this.socket.emit('news:subscribe', {
+      symbol,
+      minImportance: 5,
+    });
+  }
+  
+  removeFromPortfolio(symbol) {
+    this.portfolio.delete(symbol);
+    this.socket.emit('news:unsubscribe', { symbol });
+  }
+  
+  subscribeToPortfolio() {
+    // Subscribe to general high-importance news
+    this.socket.emit('news:subscribe', {
+      minImportance: 8,
+    });
+    
+    // Subscribe to portfolio-specific news
+    this.portfolio.forEach(symbol => {
+      this.addToPortfolio(symbol);
+    });
+  }
+  
+  evaluateArticles(articles) {
+    articles.forEach(article => {
+      this.alertRules.forEach((rule, ruleName) => {
+        if (this.evaluateRule(article, rule)) {
+          this.triggerAlert(ruleName, rule, article);
+        }
+      });
+    });
+  }
+  
+  evaluateRule(article, rule) {
+    // Check portfolio requirement
+    if (rule.portfolioOnly && !this.portfolio.has(article.symbol)) {
+      return false;
+    }
+    
+    // Check importance
+    if (rule.minImportance && article.importance < rule.minImportance) {
+      return false;
+    }
+    
+      return false;
+    }
+    
+    // Check sentiment
+    if (rule.sentimentThreshold !== undefined) {
+      if (article.sentiment.score < rule.sentimentThreshold) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  triggerAlert(ruleName, rule, article) {
+    const alert = {
+      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      rule: ruleName,
+      action: rule.action,
+      article: {
+        id: article.id,
+        title: article.title,
+        symbol: article.symbol,
+        importance: article.importance,
+        sentiment: article.sentiment,
+        publishedAt: article.publishedAt
+      },
+      timestamp: Date.now(),
+      acknowledged: false
+    };
+    
+    this.alertHistory.push(alert);
+    rule.triggered++;
+    
+    this.processAlert(alert);
+  }
+  
+  processAlert(alert) {
+    console.log('\n🚨 TRADING ALERT TRIGGERED');
+    console.log('===========================');
+    console.log(`Action: ${alert.action}`);
+    console.log(`Symbol: ${alert.article.symbol}`);
+    console.log(`Title: ${alert.article.title}`);
+    console.log(`Importance: ${alert.article.importance}/10`);
+    console.log(`Sentiment: ${alert.article.sentiment.label} (${alert.article.sentiment.score.toFixed(2)})`);
+    console.log(`Time: ${new Date(alert.timestamp).toLocaleString()}`);
+    console.log('===========================\n');
+    
+    // Send to external systems
+    this.sendToWebhook(alert);
+    this.sendEmail(alert);
+    this.sendSlackNotification(alert);
+  }
+  
+  async sendToWebhook(alert) {
+    try {
+      await fetch('https://your-webhook-url.com/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alert)
+      });
+    } catch (error) {
+      console.error('Failed to send webhook:', error);
+    }
+  }
+  
+  sendEmail(alert) {
+    // Email integration logic
+    console.log(`📧 Email sent for ${alert.action} on ${alert.article.symbol}`);
+  }
+  
+  sendSlackNotification(alert) {
+    // Slack integration logic
+    console.log(`💬 Slack notification sent for ${alert.action}`);
+  }
+  
+  getAlertStats() {
+    const stats = {
+      totalAlerts: this.alertHistory.length,
+      byAction: {},
+      bySymbol: {},
+      byRule: {},
+      last24Hours: 0
+    };
+    
+    const last24Hours = Date.now() - (24 * 60 * 60 * 1000);
+    
+    this.alertHistory.forEach(alert => {
+      // By action
+      stats.byAction[alert.action] = (stats.byAction[alert.action] || 0) + 1;
+      
+      // By symbol
+      const symbol = alert.article.symbol || 'GENERAL';
+      stats.bySymbol[symbol] = (stats.bySymbol[symbol] || 0) + 1;
+      
+      // By rule
+      stats.byRule[alert.rule] = (stats.byRule[alert.rule] || 0) + 1;
+      
+      // Last 24 hours
+      if (alert.timestamp > last24Hours) {
+        stats.last24Hours++;
+      }
+    });
+    
+    return stats;
+  }
+}
+
+// Usage
+const alertSystem = new TradingAlertSystem(process.env.BYUL_API_KEY);
+
+// Add portfolio symbols
+alertSystem.addToPortfolio('AAPL');
+alertSystem.addToPortfolio('TSLA');
+alertSystem.addToPortfolio('GOOGL');
+
+// Add custom alert rule
+alertSystem.addAlertRule('dividend_alert', {
+  minImportance: 5,
+  portfolioOnly: true,
+  action: 'DIVIDEND_OPPORTUNITY'
+});
+
+// Monitor alert statistics
+setInterval(() => {
+  const stats = alertSystem.getAlertStats();
+  console.log('Alert Statistics:', stats);
+}, 300000); // Every 5 minutes
+```
+
+## Integration Patterns
+
+### WebSocket with REST API Fallback
+
+Hybrid approach using WebSocket for real-time data with REST API fallback.
+
+```javascript
+class HybridNewsClient {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.socket = null;
+    this.fallbackMode = false;
+    this.pollInterval = null;
+    this.lastArticleId = null;
+    
+    this.initializeWebSocket();
+  }
+  
+  initializeWebSocket() {
+    this.socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey: this.apiKey },
+      timeout: 20000,
+      reconnectionAttempts: 5
+    });
+    
+    this.socket.on('connect', () => {
+      console.log('WebSocket connected');
+      this.exitFallbackMode();
+      this.subscribeToNews();
+    });
+    
+    this.socket.on('disconnect', () => {
+      console.log('WebSocket disconnected, switching to fallback');
+      this.enterFallbackMode();
+    });
+    
+    this.socket.on('connect_error', () => {
+      console.log('WebSocket connection failed, using REST API');
+      this.enterFallbackMode();
+    });
+    
+    this.socket.on('news:data', (articles) => {
+      this.handleNewsData(articles);
+    });
+  }
+  
+  subscribeToNews() {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('news:subscribe', {
+        minImportance: 7,
+        limit: 20
+      });
+    }
+  }
+  
+  enterFallbackMode() {
+    if (this.fallbackMode) return;
+    
+    this.fallbackMode = true;
+    console.log('Entering fallback mode - polling REST API');
+    
+    // Start polling REST API
+    this.pollInterval = setInterval(() => {
+      this.pollRestAPI();
+    }, 30000); // Poll every 30 seconds
+  }
+  
+  exitFallbackMode() {
+    if (!this.fallbackMode) return;
+    
+    this.fallbackMode = false;
+    console.log('Exiting fallback mode - WebSocket restored');
+    
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+  
+  async pollRestAPI() {
+    try {
+      const params = new URLSearchParams({
+        limit: '20',
+        minImportance: '7'
+      });
+      
+      if (this.lastArticleId) {
+        params.append('sinceId', this.lastArticleId);
+      }
+      
+      const response = await fetch(`https://api.byul.ai/api/v2/news?${params}`, {
+        headers: {
+          'X-API-Key': this.apiKey
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.items && data.items.length > 0) {
+        this.handleNewsData(data.items);
+        this.lastArticleId = data.items[0].id;
+      }
+      
+    } catch (error) {
+      console.error('REST API polling failed:', error);
+    }
+  }
+  
+  handleNewsData(articles) {
+    const source = this.fallbackMode ? 'REST' : 'WebSocket';
+    console.log(`Received ${articles.length} articles via ${source}`);
+    
+    articles.forEach(article => {
+      this.processArticle(article);
+    });
+  }
+  
+  processArticle(article) {
+    console.log(`[${article.importance}/10] ${article.title}`);
+    
+    // Update last article ID for REST API polling
+    if (this.fallbackMode) {
+      this.lastArticleId = article.id;
+    }
+  }
+  
+  destroy() {
+    if (this.socket) {
+      this.socket.close();
+    }
+    
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+    }
+  }
+}
+
+// Usage
+const hybridClient = new HybridNewsClient(process.env.BYUL_API_KEY);
+
+// Cleanup on exit
+process.on('SIGINT', () => {
+  hybridClient.destroy();
+  process.exit(0);
+});
+```
+
+## Best Practices
+
+**Connection Management**
+- Implement proper reconnection logic with exponential backoff
+- Use connection pooling for multiple subscriptions
+- Monitor connection health and switch to fallback when needed
+
+**Data Processing**
+- Implement client-side filtering for performance
+- Use event aggregation for high-frequency updates
+- Store critical data locally for offline access
+
+**Error Handling**
+- Handle all WebSocket events including errors
+- Implement graceful degradation to REST API
+- Provide user feedback on connection status
+
+**Performance**
+- Limit subscription scope to reduce bandwidth
+- Implement proper memory management for stored articles
+- Use appropriate batch sizes for processing

@@ -62,3 +62,9 @@ The site uses Mintlify-specific MDX components like:
 - Code examples use language-specific syntax highlighting
 - Images should be placed in `/images/` directory
 - Reusable content goes in `/snippets/` directory
+
+### API Key Guidelines
+- **ALWAYS use `byul_api_key` as the example API key format** in all documentation and code examples
+- **NEVER use** `byul_v2_your_api_key`, `byul_v2_your_api_key_here`, or any other variations
+- This standardized format ensures consistency across all WebSocket documentation and examples
+- When creating new documentation or updating existing files, search for and replace any non-standard API key formats with `byul_api_key`

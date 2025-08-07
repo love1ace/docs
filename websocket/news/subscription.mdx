@@ -1,0 +1,78 @@
+---
+title: "Subscription"
+description: "Subscribe and unsubscribe from news events"
+---
+
+## Subscribe to News
+
+Start receiving real-time news updates by subscribing to specific criteria.
+
+```javascript
+socket.emit('news:subscribe', {
+  minImportance: 7,
+  symbol: 'AAPL',
+  limit: 20
+});
+```
+
+**Parameters:**
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `minImportance` | integer | Minimum importance level (0-10) | 0 |
+| `symbol` | string | Stock symbol filter | - |
+| `limit` | integer | Max articles per batch (1-100) | 10 |
+
+## Subscription Confirmation
+
+Receive confirmation when subscription is successful.
+
+```javascript
+socket.on('news:subscribed', (confirmation) => {
+  console.log('Subscription confirmed:', confirmation);
+});
+```
+
+**Response (official format):**
+```json
+{
+  "type": "news",
+  "params": {
+    "limit": 20,
+    "minImportance": 7,
+    "symbol": "AAPL"
+  },
+  "message": "Successfully subscribed to news feed - 실시간 업데이트 활성화됨"
+}
+```
+
+## Unsubscribe
+
+Remove specific subscriptions or unsubscribe from all topics.
+
+```javascript
+// Unsubscribe from specific symbol
+socket.emit('news:unsubscribe', {
+  symbol: 'AAPL'
+});
+
+// Unsubscribe from all news
+socket.emit('news:unsubscribe:all');
+```
+
+## Multiple Subscriptions
+
+Subscribe to multiple criteria simultaneously.
+
+```javascript
+// Subscribe to high-importance general news
+socket.emit('news:subscribe', {
+  minImportance: 9
+});
+
+// Subscribe to AAPL news
+socket.emit('news:subscribe', {
+  symbol: 'AAPL',
+  minImportance: 6
+});
+```

@@ -1,0 +1,420 @@
+---
+title: "Connection Guide"
+description: "Configure and manage stable WebSocket connections"
+---
+
+## Advanced Connection Configuration
+
+<Info>
+For basic connection setup, see the [Authentication](/websocket/authentication) guide first.
+</Info>
+
+### Production-Ready Socket.IO Setup
+
+```javascript
+import { io } from 'socket.io-client';
+
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: byul_v2_your_api_key },
+  
+  // Production settings
+  transports: ['websocket'], // WebSocket only, no polling fallback
+  upgrade: true,
+  rememberUpgrade: true,
+  
+  // Reconnection strategy
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  maxReconnectionAttempts: 10,
+  randomizationFactor: 0.5,
+  
+  // Timeout configuration
+  timeout: 20000,
+  
+  // Performance options
+  forceNew: false,
+  multiplex: true
+});
+```
+
+### Native WebSocket
+
+```javascript
+class ByulWebSocket {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.url = 'wss://api.byul.ai/news-v2';
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 10;
+    this.reconnectDelay = 1000;
+    this.ws = null;
+    
+    this.connect();
+  }
+  
+  connect() {
+    try {
+      this.ws = new WebSocket(this.url, [], {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+      
+      this.setupEventListeners();
+    } catch (error) {
+      console.error('WebSocket connection failed:', error);
+      this.scheduleReconnect();
+    }
+  }
+  
+  setupEventListeners() {
+    this.ws.onopen = () => {
+      console.log('WebSocket connected successfully');
+      this.reconnectAttempts = 0; // Reset reconnection counter
+      
+      // Send authentication message
+      this.send('auth', { apiKey: this.apiKey });
+    };
+    
+    this.ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      this.handleMessage(data);
+    };
+    
+    this.ws.onclose = (event) => {
+      console.log('WebSocket connection closed:', event.code, event.reason);
+      this.scheduleReconnect();
+    };
+    
+    this.ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  }
+  
+  scheduleReconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      const delay = Math.min(
+        this.reconnectDelay * Math.pow(2, this.reconnectAttempts),
+        30000
+      );
+      
+      console.log(`Reconnecting in ${delay}ms... (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+      
+      setTimeout(() => {
+        this.reconnectAttempts++;
+        this.connect();
+      }, delay);
+    } else {
+      console.error('Maximum reconnection attempts reached');
+    }
+  }
+}
+```
+
+## Connection State Management
+
+### Connection Status Tracking
+
+```javascript
+class ConnectionManager {
+  constructor() {
+    this.connectionState = 'disconnected'; // disconnected, connecting, connected, error
+    this.lastConnected = null;
+    this.connectionAttempts = 0;
+  }
+  
+  updateState(newState) {
+    const oldState = this.connectionState;
+    this.connectionState = newState;
+    
+    console.log(`Connection state changed: ${oldState} → ${newState}`);
+    
+    // State-specific handling
+    switch (newState) {
+      case 'connected':
+        this.lastConnected = new Date();
+        this.connectionAttempts = 0;
+        this.onConnected();
+        break;
+        
+      case 'disconnected':
+        this.onDisconnected();
+        break;
+        
+      case 'error':
+        this.onError();
+        break;
+    }
+  }
+  
+  onConnected() {
+    // UI updates, restart subscriptions, etc.
+    document.getElementById('connection-status').textContent = 'Connected';
+    document.getElementById('connection-indicator').className = 'connected';
+  }
+  
+  onDisconnected() {
+    document.getElementById('connection-status').textContent = 'Disconnected';
+    document.getElementById('connection-indicator').className = 'disconnected';
+  }
+  
+  onError() {
+    document.getElementById('connection-status').textContent = 'Connection Error';
+    document.getElementById('connection-indicator').className = 'error';
+  }
+}
+```
+
+### Connection Quality Monitoring
+
+```javascript
+class ConnectionMonitor {
+  constructor(socket) {
+    this.socket = socket;
+    this.pingInterval = null;
+    this.lastPong = Date.now();
+    this.latency = 0;
+    
+    this.startPingMonitoring();
+  }
+  
+  startPingMonitoring() {
+    this.pingInterval = setInterval(() => {
+      const start = Date.now();
+      
+      this.socket.emit('ping', start, (response) => {
+        this.latency = Date.now() - start;
+        this.lastPong = Date.now();
+        
+        console.log(`Latency: ${this.latency}ms`);
+        this.updateConnectionQuality();
+      });
+    }, 30000); // Ping every 30 seconds
+  }
+  
+  updateConnectionQuality() {
+    let quality = 'good';
+    
+    if (this.latency > 1000) {
+      quality = 'poor';
+    } else if (this.latency > 500) {
+      quality = 'fair';
+    }
+    
+    // Update UI
+    document.getElementById('connection-quality').textContent = 
+      `Connection quality: ${quality} (${this.latency}ms)`;
+  }
+  
+  checkConnection() {
+    const timeSinceLastPong = Date.now() - this.lastPong;
+    
+    if (timeSinceLastPong > 60000) { // No response for over 1 minute
+      console.warn('Connection appears unstable. Attempting reconnection.');
+      this.socket.disconnect();
+      this.socket.connect();
+    }
+  }
+  
+  destroy() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+  }
+}
+```
+
+## Error Handling and Recovery
+
+### Connection Error Handling
+
+```javascript
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error.message);
+  
+  // Handle different error types
+  switch (error.type) {
+    case 'TransportError':
+      console.log('Please check your network connection');
+      break;
+      
+    case 'AuthenticationError':
+      console.log('Please verify your API key');
+      // Show authentication error UI
+      showAuthenticationError();
+      break;
+      
+    case 'RateLimitError':
+      console.log('Connection limit reached. Please try again later');
+      // Increase reconnection delay
+      increaseReconnectDelay();
+      break;
+      
+    default:
+      console.log('Unknown connection error');
+  }
+});
+```
+
+### Network Status Detection
+
+```javascript
+class NetworkMonitor {
+  constructor(socket) {
+    this.socket = socket;
+    this.isOnline = navigator.onLine;
+    
+    window.addEventListener('online', () => {
+      console.log('Network connection restored');
+      this.isOnline = true;
+      
+      if (!this.socket.connected) {
+        console.log('Attempting WebSocket reconnection');
+        this.socket.connect();
+      }
+    });
+    
+    window.addEventListener('offline', () => {
+      console.log('Network connection lost');
+      this.isOnline = false;
+    });
+  }
+  
+  checkNetworkStatus() {
+    if (!this.isOnline) {
+      console.log('Network is offline');
+      return false;
+    }
+    
+    return true;
+  }
+}
+```
+
+## Performance Optimization
+
+### Connection Pooling
+
+```javascript
+class WebSocketPool {
+  constructor(maxConnections = 3) {
+    this.maxConnections = maxConnections;
+    this.connections = [];
+    this.currentConnectionIndex = 0;
+  }
+  
+  createConnection(apiKey) {
+    if (this.connections.length >= this.maxConnections) {
+      // Reuse existing connection
+      return this.getNextConnection();
+    }
+    
+    const socket = io('wss://api.byul.ai/news-v2', {
+      auth: { apiKey },
+      transports: ['websocket']
+    });
+    
+    this.connections.push({
+      socket,
+      lastUsed: Date.now(),
+      subscriptions: new Set()
+    });
+    
+    return socket;
+  }
+  
+  getNextConnection() {
+    const connection = this.connections[this.currentConnectionIndex];
+    this.currentConnectionIndex = (this.currentConnectionIndex + 1) % this.connections.length;
+    connection.lastUsed = Date.now();
+    
+    return connection.socket;
+  }
+}
+```
+
+### Message Compression
+
+```javascript
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: process.env.BYUL_API_KEY },
+  compression: true, // Enable message compression
+  perMessageDeflate: {
+    threshold: 1024, // Compress messages over 1KB only
+    concurrencyLimit: 10,
+    memLevel: 8
+  }
+});
+```
+
+## Connection Termination and Cleanup
+
+### Graceful Shutdown
+
+```javascript
+class GracefulShutdown {
+  constructor(socket) {
+    this.socket = socket;
+    this.isShuttingDown = false;
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      this.shutdown();
+    });
+    
+    // Handle process termination signals (Node.js)
+    process.on('SIGINT', () => {
+      this.shutdown();
+    });
+  }
+  
+  async shutdown() {
+    if (this.isShuttingDown) return;
+    
+    this.isShuttingDown = true;
+    console.log('Cleaning up WebSocket connections...');
+    
+    try {
+      // Unsubscribe from all topics
+      this.socket.emit('news:unsubscribe:all');
+      
+      // Wait for cleanup completion
+      await new Promise((resolve) => {
+        this.socket.on('unsubscribe:complete', resolve);
+        setTimeout(resolve, 1000); // Timeout fallback
+      });
+      
+      // Close connection
+      this.socket.disconnect();
+      console.log('WebSocket connection closed gracefully');
+      
+    } catch (error) {
+      console.error('Error during connection cleanup:', error);
+    }
+  }
+}
+```
+
+## Best Practices
+
+**Connection Configuration**
+- Set appropriate timeout values (20-30 seconds)
+- Implement exponential backoff for reconnection logic
+- Limit maximum reconnection attempts
+
+**Error Handling**
+- Implement error handlers for all events
+- Monitor network status
+- Display user-friendly error messages
+
+**Performance Optimization**
+- Enable message compression
+- Prevent unnecessary subscriptions
+- Cache connection state
+
+**Security**
+- Secure API key management
+- Use HTTPS/WSS only
+- Validate connection authentication status
