@@ -1,165 +1,34 @@
 ---
-title: "Byul API - Real-time Financial News API"
-description: "Get global economic news data in real-time without delay at reasonable prices via API. Average response time < 100ms. Perfect for developers and businesses."
+title: "Byul API Documentation"
+description: "Access real-time financial news data through our REST API and WebSocket connections. Perfect for developers building financial applications."
 ---
 
-# Real-time Economic News API for Developers
-
-Get global economic news data in real-time without delay at reasonable prices via API. Build powerful financial applications with the world's fastest economic news delivery system.
-
-<Card
-  title="Get Started - Free API Access"
-  icon="rocket"
-  href="/rest-api/quickstart"
-  horizontal
->
-  Start building with our REST API in 5 minutes. 100 free API calls per month.
-</Card>
-
-## Key Features
-
-Build next-generation financial applications with our powerful API.
+## Quick Start
 
 <Columns cols={2}>
   <Card
-    title="Real-time Data"
-    icon="bolt"
-    href="/rest-api/overview"
-  >
-    Get market-moving news instantly without delay. Average response time < 100ms.
-  </Card>
-  <Card
-    title="Global Coverage"
+    title="REST API"
     icon="globe"
-    href="/rest-api/news/data-format"
+    href="/rest-api/quickstart"
   >
-    Comprehensive economic news from worldwide sources in Korean and English. 24/7 uptime guarantee.
+    HTTP-based API for flexible news data access
   </Card>
   <Card
-    title="Developer Friendly"
-    icon="code"
-    href="/rest-api/authentication"
-  >
-    RESTful API, comprehensive docs, and SDKs for easy integration. Integrate in 5 minutes.
-  </Card>
-  <Card
-    title="WebSocket Support"
+    title="WebSocket"
     icon="satellite-dish"
     href="/websocket/quickstart"
   >
-    Real-time streaming news updates via WebSocket for Pro and Enterprise plans.
+    Real-time streaming updates (Pro+ plans)
   </Card>
 </Columns>
 
-## Use Cases
+## Documentation
 
-Power your applications with real-time financial news intelligence.
-
-<Columns cols={2}>
-  <Card
-    title="LLM Services"
-    icon="brain"
-    href="/rest-api/examples/nodejs"
-  >
-    Provide real-time economic data to AI models for more accurate analysis and predictions.
-  </Card>
-  <Card
-    title="Trading Platforms"
-    icon="chart-line"
-    href="/rest-api/examples/python"
-  >
-    Get market-moving news in real-time for algorithmic trading strategies.
-  </Card>
-  <Card
-    title="Investment Services"
-    icon="briefcase"
-    href="/rest-api/examples/react"
-  >
-    Deliver real-time economic news for portfolio management and investment decisions.
-  </Card>
-  <Card
-    title="News Services"
-    icon="newspaper"
-    href="/websocket/examples/react"
-  >
-    Power your economic news websites or apps with real-time breaking news.
-  </Card>
-  <Card
-    title="Research Companies"
-    icon="magnifying-glass-chart"
-    href="/rest-api/news/filtering"
-  >
-    Use as a data source for market analysis reports and investment research.
-  </Card>
-  <Card
-    title="Fintech Apps"
-    icon="mobile"
-    href="/websocket/examples/nodejs"
-  >
-    Enhance user experience by adding economic news features to personal finance apps.
-  </Card>
-</Columns>
-
-## Why Choose Byul API?
-
-<Info>
-**99.9% Uptime Guarantee** - Mission-critical reliability for your financial applications.
-</Info>
-
-<Warning>
-**Sub-100ms Response Time** - The fastest financial news API in the market. Don't let slow data cost you money.
-</Warning>
-
-<Tip>
-**Free Testing Plan** - Start building immediately with 100 free API calls per month. No credit card required.
-</Tip>
-
-## Quick Start Examples
-
-<Tabs>
-<Tab title="REST API">
-```bash
-curl -X GET "https://api.byul.ai/api/v2/news?minImportance=8&limit=5" \
-  -H "X-API-Key: byul_api_key"
-```
-</Tab>
-<Tab title="JavaScript">
-```javascript
-const getBreakingNews = async () => {
-  const response = await fetch('https://api.byul.ai/api/v2/news?minImportance=8', {
-    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
-  });
-  const data = await response.json();
-  console.log(`${data.items.length} breaking news articles found`);
-};
-```
-</Tab>
-<Tab title="WebSocket">
-```javascript
-import { io } from 'socket.io-client';
-
-const socket = io('wss://api.byul.ai/news-v2', {
-  auth: { apiKey: 'byul_api_key' }
-});
-
-socket.emit('news:subscribe', { minImportance: 7 });
-socket.on('news:data', (news) => {
-  console.log('Breaking news received:', news.data.news.length);
-});
-```
-</Tab>
-</Tabs>
-
-## Ready to Build?
-
-<CardGroup cols={3}>
-<Card title="REST API Guide" href="/rest-api/quickstart">
-Start with our RESTful API for HTTP-based integration
+<CardGroup cols={2}>
+<Card title="REST API" href="/rest-api/quickstart">
+Get started with HTTP-based API integration
 </Card>
-<Card title="WebSocket Guide" href="/websocket/quickstart">  
-Stream real-time news updates with WebSocket (Pro+ plans)
-</Card>
-<Card title="API Reference" href="/api-reference/introduction">
-Complete API documentation with examples and pricing
+<Card title="WebSocket" href="/websocket/quickstart">  
+Real-time streaming for Pro+ plans
 </Card>
 </CardGroup>
