@@ -4,8 +4,8 @@
   "name": "Byul",
   "colors": {
     "primary": "#000000",
-    "light": "#6366f1",
-    "dark": "#110C1B"
+    "light": "#a855f7",
+    "dark": "#7c3aed"
   },
   "favicon": "/favicon.ico",
   "navigation": {
@@ -97,18 +97,23 @@
       "anchors": [
         {
           "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
+          "href": "https://docs.byul.ai",
           "icon": "book-open-cover"
         },
         {
-          "anchor": "Community",
-          "href": "https://mintlify.com/community",
-          "icon": "slack"
+          "anchor": "Pricing",
+          "href": "https://www.byul.ai/api/pricing",
+          "icon": "credit-card"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Status",
+          "href": "https://www.byul.ai/status",
+          "icon": "chart-line"
+        },
+        {
+          "anchor": "Contact",
+          "href": "https://www.byul.ai/contact",
+          "icon": "envelope"
         }
       ]
     }
@@ -121,13 +126,13 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:owner@byul.ai"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://www.byul.ai/api/dashboard"
     }
   },
   "contextual": {
@@ -144,7 +149,8 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/byul_finance"
+      "x": "https://x.com/byul_finance",
+      "website": "https://www.byul.ai"
     }
   }
 }
