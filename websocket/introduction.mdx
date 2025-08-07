@@ -1,155 +1,93 @@
 ---
 title: "Overview"
-description: "Stream breaking financial news in real-time with WebSocket connections. Perfect for HFT, algorithmic trading, and live financial applications."
+description: "WebSocket API for real-time financial news streaming"
 ---
 
-# Real-time Financial News Streaming
+# WebSocket API
 
-**Get market-moving news instantly** with WebSocket streaming - the competitive advantage that algorithmic traders, hedge funds, and fintech companies use to stay ahead of the market.
+Real-time financial news streaming through WebSocket connections.
 
-<Warning>
-**Speed = Profit**: In financial markets, milliseconds matter. WebSocket streaming delivers news updates **10x faster** than traditional polling methods.
-</Warning>
+**Endpoint:** `wss://api.byul.ai/news-v2`
 
-## Why WebSocket Streaming?
+## Features
 
-**Beat the Competition**  
-Receive breaking news the moment it happens. No delays, no polling overhead. Perfect for high-frequency trading and automated decision systems.
+- Real-time news delivery
+- Event-based messaging
+- Subscription filtering
+- Automatic reconnection
+- Error handling
 
-**Real-time Intelligence**  
-Get Fed announcements, earnings surprises, and geopolitical events before they move markets. Your applications react instantly while others lag behind.
+## Authentication
 
-**Enterprise-Grade Performance**  
-Handle thousands of concurrent connections with guaranteed delivery and automatic reconnection. Built for mission-critical financial infrastructure.
+Authenticate using your API key in the connection options:
 
-## Use Cases
-
-**Algorithmic Trading**  
-Execute trades milliseconds after market-moving news breaks. Perfect for momentum strategies and news-based algorithms.
-
-**Risk Management**  
-Monitor portfolio exposure in real-time. Get instant alerts for events affecting your positions.
-
-**Financial Media**  
-Power live news feeds, breaking news alerts, and real-time market dashboards.
-
-**Investment Platforms**  
-Deliver instant notifications to users about their holdings and market opportunities.
-
-## Key Features
-
-**Instant Delivery**  
-News arrives within 100ms of publication. No HTTP request overhead or polling delays.
-
-**Smart Filtering**  
-Subscribe only to news that matters - filter by importance score, symbols, categories, and keywords.
-
-**Persistent Connection**  
-Single connection handles unlimited news updates. Automatic reconnection ensures continuous data flow.
-
-**Event-Driven Architecture**  
-React to specific events like subscription confirmations, errors, and data updates.
-
-## WebSocket Endpoint
-
+```javascript
+const socket = io('wss://api.byul.ai/news-v2', {
+  auth: { apiKey: 'byul_api_key' }
+});
 ```
-wss://api.byul.ai/news-v2
-```
+
+## Events
+
+**Client to Server:**
+- `news:subscribe` - Subscribe to news stream
+- `news:unsubscribe` - Unsubscribe from stream  
+- `news:unsubscribe:all` - Unsubscribe from all
+
+**Server to Client:**
+- `auth:success` - Authentication confirmed
+- `news:data` - Real-time news articles
+- `news:subscribed` - Subscription confirmed
+- `news:error` - Error notifications
 
 ## Plan Requirements
 
 <Info>
-**Pro and Enterprise Plans Only** - WebSocket streaming requires advanced infrastructure and is available for serious financial applications.
+WebSocket streaming requires Pro or Enterprise plan.
 </Info>
 
-| Plan | WebSocket Support | Concurrent Connections | Best For |
-|------|-------------------|------------------------|----------|
-| Test (Free) | No | - | REST API testing |
-| Starter ($19/month) | No | - | Basic integrations |
-| **Pro ($99/month)** | **Yes** | **10 connections** | **Trading platforms, fintech apps** |
-| **Enterprise** | **Yes** | **50 connections** | **Hedge funds, banks, exchanges** |
+| Plan | Support | Connections |
+|------|---------|-------------|
+| Test (Free) | No | - |
+| Starter | No | - |
+| Pro | Yes | 10 |
+| Enterprise | Yes | 50 |
 
-## Performance Benefits
-
-<Columns cols={2}>
-  <div>
-    **Traditional REST Polling**
-    - Request every 1-5 seconds
-    - High latency (1-5 second delays)
-    - Server overhead from constant requests
-    - Missed breaking news between polls
-  </div>
-  <div>
-    **WebSocket Streaming**
-    - Instant delivery (sub-100ms)
-    - No polling overhead  
-    - Single persistent connection
-    - Never miss breaking news
-  </div>
-</Columns>
-
-## Quick Start Example
-
-Get breaking news instantly with just a few lines of code:
+## Quick Example
 
 ```javascript
 import { io } from 'socket.io-client';
 
-// Connect to real-time news stream
 const socket = io('wss://api.byul.ai/news-v2', {
   auth: { apiKey: 'byul_api_key' }
 });
 
-// Subscribe to high-impact market-moving news
 socket.on('connect', () => {
   socket.emit('news:subscribe', { 
-    minImportance: 8,  // Only critical news
-    symbols: ['SPY', 'QQQ', 'DXY']  // Market indicators
+    minImportance: 8
   });
 });
 
-// React to breaking news instantly
 socket.on('news:data', (response) => {
-  const articles = response.data.news;
-  console.log(`BREAKING: ${articles.length} market-moving events`);
-  
-  articles.forEach(article => {
-    if (article.importanceScore >= 9) {
-      // Execute trading strategy for critical news
-      handleBreakingNews(article);
-    }
+  response.data.news.forEach(article => {
+    console.log(`${article.title} (${article.importanceScore})`);
   });
 });
 ```
 
-<Info>
-**Ready to Stream?** Start with our [WebSocket Quickstart](/websocket/quickstart) guide and begin receiving real-time financial intelligence in minutes.
-</Info>
-
-## Supported Events
-
-### Client → Server
-- **`news:subscribe`** - Subscribe to filtered news stream
-- **`news:unsubscribe`** - Stop specific subscriptions
-- **`news:unsubscribe:all`** - Disconnect from all streams
-
-### Server → Client  
-- **`auth:success`** - Connection authenticated successfully
-- **`news:data`** - Real-time breaking news delivered
-- **`news:subscribed`** - Subscription confirmed and active
-- **`news:unsubscribed`** - Successfully unsubscribed
-- **`news:error`** - Error notifications and troubleshooting
-
 ## Next Steps
 
-<CardGroup cols={3}>
-<Card title="Quick Start" href="/websocket/quickstart">
-Connect and start streaming news in 5 minutes
+<CardGroup cols={2}>
+<Card title="Quickstart" href="/websocket/quickstart">
+Connect and start streaming
 </Card>
-<Card title="Authentication" href="/websocket/authentication">  
-Secure your WebSocket connection with API keys
+<Card title="Examples" href="/websocket/examples/nodejs">
+Code examples in multiple languages
 </Card>
-<Card title="Advanced Examples" href="/websocket/examples/nodejs">
-Production-ready code for trading platforms
+<Card title="Authentication" href="/websocket/authentication">
+API key authentication setup
+</Card>
+<Card title="Connection" href="/websocket/connection">
+Connection management guide
 </Card>
 </CardGroup>

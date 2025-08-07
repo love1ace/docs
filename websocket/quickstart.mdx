@@ -3,15 +3,15 @@ title: "Quickstart"
 description: "Get up and running with Byul WebSocket API in 5 minutes"
 ---
 
-## Get Started in 5 Minutes
+## WebSocket Connection Setup
 
-**Stream breaking financial news instantly** and gain the competitive edge that algorithmic traders and fintech companies use to beat the market. WebSocket connections deliver news **10x faster** than traditional polling methods.
+Connect to real-time financial news streams using WebSocket API.
 
-**What you'll achieve:**
-- Connect to real-time news streams in under 5 minutes  
-- Receive market-moving news within 100ms of publication
-- Build applications that react instantly to Fed announcements, earnings, and geopolitical events
-- Gain the speed advantage that separates winning trading strategies from the rest
+**Setup Steps:**
+- Configure WebSocket client with API authentication
+- Subscribe to filtered news streams
+- Handle real-time data events
+- Implement error handling and reconnection logic
 
 ### Prerequisites
 
@@ -63,7 +63,7 @@ const socket = io('wss://api.byul.ai/news-v2', {
 
 // Handle connection
 socket.on('connect', () => {
-  console.log('🎉 Connected to Byul WebSocket!');
+  console.log('Connected to Byul WebSocket');
   
   // Subscribe to high-importance news
   socket.emit('news:subscribe', {
@@ -73,7 +73,7 @@ socket.on('connect', () => {
 
 // Handle authentication success
 socket.on('auth:success', (data) => {
-  console.log('✅ Authenticated successfully:', data.user.plan);
+  console.log('Authenticated successfully:', data.user.plan);
 });
 
 // Handle incoming news
@@ -81,19 +81,19 @@ socket.on('news:data', (response) => {
   const { news } = response.data;
   
   news.forEach(article => {
-    console.log(`📰 ${article.title}`);
-    console.log(`📊 Importance: ${article.importanceScore}/10`);
-    console.log(`🏷️  Category: ${article.category}`);
+    console.log(article.title);
+    console.log(`Importance: ${article.importanceScore}/10`);
+    console.log(`Category: ${article.category}`);
     console.log('---');
   });
 });
 
 // Handle errors
 socket.on('news:error', (error) => {
-  console.error('❌ Error:', error.message);
+  console.error('Error:', error.message);
 });
 
-console.log('🔌 Connecting to Byul WebSocket...');
+console.log('Connecting to Byul WebSocket...');
 ```
 </Tab>
 <Tab title="Python">
@@ -108,7 +108,7 @@ sio = socketio.AsyncClient()
 
 @sio.event
 async def connect():
-    print('🎉 Connected to Byul WebSocket!')
+    print('Connected to Byul WebSocket')
     
     # Subscribe to high-importance news
     await sio.emit('news:subscribe', {
@@ -117,24 +117,24 @@ async def connect():
 
 @sio.on('auth:success')
 async def auth_success(data):
-    print(f"✅ Authenticated successfully: {data['user']['plan']}")
+    print(f"Authenticated successfully: {data['user']['plan']}")
 
 @sio.on('news:data')
 async def handle_news(response):
     news = response['data']['news']
     
     for article in news:
-        print(f"📰 {article['title']}")
-        print(f"📊 Importance: {article['importanceScore']}/10")
-        print(f"🏷️  Category: {article['category']}")
+        print(article['title'])
+        print(f"Importance: {article['importanceScore']}/10")
+        print(f"Category: {article['category']}")
         print('---')
 
 @sio.on('news:error')
 async def news_error(error):
-    print(f"❌ Error: {error['message']}")
+    print(f"Error: {error['message']}")
 
 async def main():
-    print('🔌 Connecting to Byul WebSocket...')
+    print('Connecting to Byul WebSocket...')
     
     await sio.connect('wss://api.byul.ai/news-v2', 
                       auth={'apiKey': API_KEY})
@@ -157,14 +157,14 @@ function QuickstartNews() {
   const [status, setStatus] = useState('Connecting...');
 
   useEffect(() => {
-    console.log('🔌 Connecting to Byul WebSocket...');
+    console.log('Connecting to Byul WebSocket...');
     
     const socket = io('wss://api.byul.ai/news-v2', {
       auth: { apiKey: API_KEY }
     });
 
     socket.on('connect', () => {
-      console.log('🎉 Connected to Byul WebSocket!');
+      console.log('Connected to Byul WebSocket');
       setStatus('Connected');
       
       // Subscribe to high-importance news
@@ -174,7 +174,7 @@ function QuickstartNews() {
     });
 
     socket.on('auth:success', (data) => {
-      console.log('✅ Authenticated successfully:', data.user.plan);
+      console.log('Authenticated successfully:', data.user.plan);
       setStatus(`Connected (${data.user.plan})`);
     });
 
@@ -184,7 +184,7 @@ function QuickstartNews() {
     });
 
     socket.on('news:error', (error) => {
-      console.error('❌ Error:', error.message);
+      console.error('Error:', error.message);
       setStatus(`Error: ${error.message}`);
     });
 
@@ -193,13 +193,13 @@ function QuickstartNews() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h2>🚀 Byul WebSocket Quickstart</h2>
+      <h2>Byul WebSocket Quickstart</h2>
       <p><strong>Status:</strong> <span style={{ 
         color: status.includes('Connected') ? 'green' : 
                status.includes('Error') ? 'red' : 'orange' 
       }}>{status}</span></p>
       
-      <h3>📰 Latest News ({news.length})</h3>
+      <h3>Latest News ({news.length})</h3>
       {news.map(article => (
         <div key={article._id} style={{
           border: '1px solid #ddd',
@@ -208,7 +208,7 @@ function QuickstartNews() {
           borderRadius: '5px'
         }}>
           <h4>{article.title}</h4>
-          <p>📊 Importance: {article.importanceScore}/10 | 🏷️ {article.category}</p>
+          <p>Importance: {article.importanceScore}/10 | Category: {article.category}</p>
           <small>{new Date(article.date).toLocaleString()}</small>
         </div>
       ))}
@@ -233,14 +233,14 @@ export default QuickstartNews;
 node your-websocket-app.js
 ```
 
-You should see:
+Expected output:
 ```
-🔌 Connecting to Byul WebSocket...
-🎉 Connected to Byul WebSocket!
-✅ Authenticated successfully: pro
-📰 Breaking: Fed Issues Emergency Statement
-📊 Importance: 10/10
-🏷️ Category: fed
+Connecting to Byul WebSocket...
+Connected to Byul WebSocket!
+Authenticated successfully: pro
+Breaking: Fed Issues Emergency Statement
+Importance: 10/10
+Category: fed
 ---
 ```
 </Tab>
@@ -249,14 +249,14 @@ You should see:
 python your-websocket-app.py
 ```
 
-You should see:
+Expected output:
 ```
-🔌 Connecting to Byul WebSocket...
-🎉 Connected to Byul WebSocket!
-✅ Authenticated successfully: pro
-📰 Breaking: Fed Issues Emergency Statement
-📊 Importance: 10/10
-🏷️ Category: fed
+Connecting to Byul WebSocket...
+Connected to Byul WebSocket!
+Authenticated successfully: pro
+Breaking: Fed Issues Emergency Statement
+Importance: 10/10
+Category: fed
 ---
 ```
 </Tab>
@@ -269,9 +269,9 @@ Your browser will show a live-updating news feed with connection status.
 </Tab>
 </Tabs>
 
-## 🎉 Congratulations!
+## Connection Complete
 
-You've successfully connected to Byul WebSocket API and are receiving real-time news updates!
+WebSocket connection established and receiving real-time news updates.
 
 ### What's Next?
 
@@ -290,32 +290,32 @@ See production-ready implementation examples
 </Card>
 </CardGroup>
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-**❌ Authentication Failed**
-- Check your API key format (must start with `byul_v2_`)
-- Verify your API key at [Dashboard](https://www.byul.ai/api/dashboard)
-- Ensure you have Pro or Enterprise plan
+**Authentication Failed**
+- Verify API key format (starts with `byul_v2_`)
+- Check API key at Dashboard
+- Confirm Pro or Enterprise plan access
 
-**❌ WebSocket Not Supported**
-- Upgrade to Pro ($99/month) or Enterprise plan
-- Check [Pricing](https://www.byul.ai/api/pricing) for plan details
+**WebSocket Not Supported**
+- Requires Pro or Enterprise plan
+- Check current plan status
 
-**❌ Connection Timeout**
-- Check your network connection
-- Try connecting from a different network
-- Contact [Support](https://www.byul.ai/contact) if issues persist
+**Connection Timeout**
+- Verify network connectivity
+- Check firewall settings
+- Test from different network if needed
 
-### Need Help?
+### Additional Resources
 
-- 📖 Read the full [WebSocket Documentation](/websocket/introduction)
-- 💬 Join our [Community](https://www.byul.ai/community)
-- 📧 Contact [Support](https://www.byul.ai/contact)
+- Full [WebSocket Documentation](/websocket/introduction)
+- [Community Forum](https://www.byul.ai/community)
+- [Technical Support](https://www.byul.ai/contact)
 
 <Info>
-**Pro Tip**: Use environment variables in production instead of hardcoding API keys:
+**Security**: Use environment variables in production to store API keys securely:
 ```bash
 export BYUL_API_KEY=byul_api_key
 ```

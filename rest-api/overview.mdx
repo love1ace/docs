@@ -1,49 +1,28 @@
 ---
 title: "Overview"
-description: "Introduction to Byul AI News REST API v2"
+description: "Byul REST API v2 reference documentation"
 ---
 
-## What is Byul REST API?
+## REST API
 
-**The world's fastest financial news API** - Get market-moving economic news in real-time with sub-100ms response times. Perfect for developers building AI models, trading platforms, fintech apps, and investment services that need instant access to global financial intelligence.
+Byul REST API v2 provides access to financial news data through RESTful JSON endpoints.
 
-**Why Choose Byul?** 
-- **Speed**: Average response time < 100ms - Don't let slow data cost you money
-- **Reliability**: 99.9% uptime SLA with mission-critical infrastructure  
-- **Intelligence**: AI-curated news from 1,000+ global financial sources
-- **Scale**: Handle millions of requests with enterprise-grade performance
+**Base URL:** `https://api.byul.ai/api/v2`
 
-## Key Features
+## Features
 
-**Lightning-Fast Real-time Data**  
-Receive breaking financial news within 0.1 seconds of publication. Beat the competition with the fastest economic news delivery in the market - perfect for HFT and algorithmic trading.
-
-**AI-Powered Smart Filtering**  
-Get only the news that matters with our importance scoring (1-10). Filter by symbols, Fed announcements, earnings, geopolitical risks, and more. Stop drowning in noise.
-
-**Global Financial Intelligence**  
-Access news from 1,000+ worldwide sources including WSJ, Bloomberg, Reuters, and central banks. Available in Korean and English with 24/7 coverage.
-
-**Enterprise-Grade Performance**  
-Handle millions of API calls with guaranteed 99.9% uptime. Built for mission-critical financial applications with comprehensive rate limiting and monitoring.
-
-**Developer-First Design**  
-Integrate in 5 minutes with RESTful JSON API. Complete documentation, code examples, and SDKs for all major languages. No complex setup required.
+- Financial news data access
+- Importance scoring (1-10)
+- Symbol-based filtering  
+- Cursor-based pagination
+- Real-time updates
 
 ## Authentication
 
-All API requests require authentication using your API key in the `X-API-Key` header:
+Include your API key in the request header:
 
 ```http
 X-API-Key: byul_api_key
-```
-
-Get your API key from the [Byul API Dashboard](https://www.byul.ai/api/dashboard).
-
-## Base URL
-
-```
-https://api.byul.ai/api/v2
 ```
 
 ## Quick Example
@@ -76,95 +55,56 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=5&minImportance=8" \
 
 ### GET /news
 
-Fetch financial news with optional filtering and pagination.
+Retrieve financial news articles.
 
 **Parameters:**
-- `limit` (optional): Number of items to return (1-100, default: 20)
-- `minImportance` (optional): Minimum importance score (1-10, default: 1)
-- `symbol` (optional): Filter by stock symbol (e.g., "AAPL")
-- `q` (optional): Search query for title/content
-- `cursor` (optional): Pagination cursor from previous response
-- `category` (optional): Filter by news category
+- `limit` (integer): Articles to return (1-100, default: 20)
+- `minImportance` (integer): Minimum importance score (1-10, default: 1)
+- `symbol` (string): Filter by stock symbol
+- `q` (string): Search query
+- `cursor` (string): Pagination cursor
+- `category` (string): News category filter
 
 ## Rate Limits
 
-Rate limits vary by subscription plan:
+| Plan | Rate Limit |
+|------|------------|
+| Test (Free) | 30 requests/minute |
+| Starter | 60 requests/minute |
+| Pro | 120 requests/minute |
+| Enterprise | Custom |
 
-- **Test (Free)**: 30 requests/minute
-- **Starter ($19/month)**: 60 requests/minute  
-- **Pro ($99/month)**: 120 requests/minute
-- **Enterprise**: Custom limits
+**Headers:**
+- `X-V2-RateLimit-Limit`
+- `X-V2-RateLimit-Remaining`  
+- `X-V2-RateLimit-Used`
+- `X-V2-RateLimit-Reset`
 
-Rate limit information is included in response headers:
-- `X-V2-RateLimit-Limit`: Total rate limit
-- `X-V2-RateLimit-Remaining`: Remaining requests
-- `X-V2-RateLimit-Used`: Used requests
-- `X-V2-RateLimit-Reset`: Reset timestamp
+## Response Format
 
-## Data Quality
+**Article Object:**
+- `_id`: Unique article identifier
+- `title`: Article title
+- `url`: Source URL
+- `date`: Publication date (ISO 8601)
+- `importanceScore`: Market importance (1-10)
+- `category`: News category
+- `symbols`: Associated stock symbols (array)
+- `sentiment`: Sentiment analysis result
 
-**AI-Powered Curation**  
-Our AI algorithms analyze thousands of sources daily, filtering out noise and duplicate content.
+## Next Steps
 
-**Importance Scoring**  
-Every article receives an importance score (1-10) based on:
-- Market impact potential
-- Source credibility  
-- Content quality
-- Historical significance
-
-**Real-time Processing**  
-News articles are processed and available via API within seconds of publication.
-
-## Use Cases
-
-**Trading Applications**  
-Build algorithmic trading systems that react to breaking news and market sentiment.
-
-**Portfolio Management**  
-Monitor news affecting your portfolio holdings with symbol-based filtering.
-
-**Financial Research**  
-Analyze market trends and sentiment using historical and real-time news data.
-
-**News Aggregation**  
-Create custom financial news dashboards and feeds for your users.
-
-**Risk Management**  
-Set up alerts for high-importance news that could impact your positions.
-
-## Getting Started
-
-1. **Sign up** at [Byul API](https://www.byul.ai/api) to get your API key
-2. **Read the** [Quickstart Guide](/rest-api/quickstart) for a 5-minute setup
-3. **Explore** our comprehensive [Examples](/rest-api/examples/nodejs) in multiple languages
-4. **Test** your integration using our interactive API documentation
-
-## Support
-
-**Documentation**  
-Comprehensive guides covering authentication, filtering, error handling, and examples.
-
-**Community**  
-Join our [Discord community](https://www.byul.ai/community) for discussions and support.
-
-**Technical Support**  
-Enterprise customers get priority technical support with SLA guarantees.
-
-**Status Page**  
-Monitor API uptime and performance at [status.byul.ai](https://status.byul.ai).
-
-## Pricing
-
-Visit our [Pricing Page](https://www.byul.ai/api/pricing) to see detailed plan comparisons and features. All plans include:
-
-- Global financial news coverage
-- Real-time news delivery
-- Importance scoring and filtering
-- Historical data access
-- JSON API responses
-- Rate limiting headers
-- SSL encryption
-- 99.9% uptime SLA
-
-Start with our free Test plan to explore the API, then upgrade as your needs grow.
+<CardGroup cols={2}>
+<Card title="Quickstart" href="/rest-api/quickstart">
+Get started with REST API requests
+</Card>
+<Card title="Examples" href="/rest-api/examples/nodejs">
+Code examples in multiple languages
+</Card>
+<Card title="Authentication" href="/rest-api/authentication">
+API key setup and security
+</Card>
+<Card title="Error Handling" href="/rest-api/error-handling">
+Handle API errors and status codes
+</Card>
+</CardGroup>
