@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "Byul",
   "colors": {
-    "primary": "#000000",
-    "light": "#a855f7",
-    "dark": "#7c3aed"
+    "primary": "#4338ca",
+    "light": "#7c3aed",
+    "dark": "#5b21b6"
   },
   "favicon": "/favicon.ico",
   "navigation": {
