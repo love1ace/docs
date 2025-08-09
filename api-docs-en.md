@@ -103,7 +103,6 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5" \
 |-------|------|-------------|
 | `_id` | string | Unique article ID |
 | `title` | string | Article title (primary, usually English) |
-| `englishTitle` | string | English title (optional, may be same as title) |
 | `koTitle` | string | Korean title (optional) |
 | `url` | string | Original article URL |
 | `date` | string | Article date (ISO 8601 format) |
@@ -122,7 +121,6 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5" \
     {
       "_id": "67850d7b0123456789abcdef",
       "title": "Tesla Stock Surges After Q4 Earnings Beat",
-      "englishTitle": "Tesla Stock Surges After Q4 Earnings Beat",
       "koTitle": "테슬라 4분기 실적 발표 후 주가 급등",
       "url": "https://www.byul.ai/news/tesla-earnings-q4-2024",
       "date": "2024-01-15T10:30:00.000Z",
@@ -137,7 +135,6 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5" \
     {
       "_id": "67850d7b0123456789abcde0",
       "title": "Fed Minutes Released, Signal Additional Rate Cuts",
-      "englishTitle": "Fed Minutes Released, Signal Additional Rate Cuts",
       "koTitle": "연준 회의록 공개, 추가 금리 인하 시사",
       "url": "https://www.byul.ai/news/fed-fomc-minutes-january",
       "date": "2024-01-15T09:15:00.000Z",
@@ -271,7 +268,6 @@ socket.on('news:data', (response) => {
       {
         "_id": "67850d7b0123456789abcde1",
         "title": "Breaking: Fed Issues Emergency Statement",
-        "englishTitle": "Breaking: Fed Issues Emergency Statement",
         "koTitle": "속보: 연준 긴급성명 발표",
         "url": "https://www.byul.ai/news/fed-emergency-statement",
         "date": "2024-01-15T14:30:00.000Z",

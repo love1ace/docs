@@ -11,7 +11,6 @@ News articles are delivered with the following data structure based on the offic
 {
   "_id": "67850d7b0123456789abcdef",
   "title": "Tesla Stock Surges After Q4 Earnings Beat",
-  "englishTitle": "Tesla Stock Surges After Q4 Earnings Beat",
   "koTitle": "테슬라 4분기 실적 발표 후 주가 급등",
   "url": "https://www.byul.ai/news/tesla-earnings-q4-2024",
   "date": "2024-01-15T10:30:00.000Z",
@@ -30,7 +29,6 @@ News articles are delivered with the following data structure based on the offic
 **Core Fields:**
 - `_id` - Unique article identifier
 - `title` - Article headline (primary, usually English)
-- `englishTitle` - English title (optional, may be same as title)
 - `koTitle` - Korean title (optional)
 - `url` - Link to original article
 - `date` - Article date (ISO 8601 format)
@@ -77,7 +75,6 @@ The complete WebSocket response structure:
       {
         "_id": "67850d7b0123456789abcde1",
         "title": "Breaking: Fed Issues Emergency Statement",
-        "englishTitle": "Breaking: Fed Issues Emergency Statement",
         "koTitle": "속보: 연준 긴급성명 발표",
         "url": "https://www.byul.ai/news/fed-emergency-statement",
         "date": "2024-01-15T14:30:00.000Z",
@@ -133,7 +130,6 @@ socket.on('news:data', (response) => {
 
 Articles include multi-language titles:
 - `title` - Primary title (usually English)
-- `englishTitle` - English version (optional)
 - `koTitle` - Korean version (optional)
 
 Use the appropriate title field based on your application's language requirements.

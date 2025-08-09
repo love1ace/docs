@@ -67,7 +67,6 @@ Each article in the `items` array follows this structure based on the official A
 {
   "_id": "67850d7b0123456789abcdef",
   "title": "Tesla Stock Surges After Q4 Earnings Beat",
-  "englishTitle": "Tesla Stock Surges After Q4 Earnings Beat",
   "koTitle": "테슬라 4분기 실적 발표 후 주가 급등",
   "url": "https://www.byul.ai/news/tesla-earnings-q4-2024",
   "date": "2024-01-15T10:30:00.000Z",
@@ -90,9 +89,6 @@ Unique article identifier. Use this for deduplication and referencing.
 
 **`title`** (string, required)  
 Primary article headline, usually in English
-
-**`englishTitle`** (string, optional)  
-English version of the title. May be identical to `title`
 
 **`koTitle`** (string, optional)  
 Korean translation of the title
@@ -150,7 +146,6 @@ Sentiment analysis result:
 |-------|------|----------|--------|------------|
 | `_id` | string | Yes | MongoDB ObjectId | 24 hex characters |
 | `title` | string | Yes | Text | Max 500 characters |
-| `englishTitle` | string | No | Text | Max 500 characters |
 | `koTitle` | string | No | Text | Max 500 characters |
 | `url` | string | Yes | URL | Valid HTTPS URL |
 | `date` | string | Yes | ISO 8601 | UTC timezone |

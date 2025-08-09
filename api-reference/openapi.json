@@ -239,11 +239,6 @@
             "description": "Article title (primary, usually English)",
             "example": "Tesla Stock Surges After Q4 Earnings Beat"
           },
-          "englishTitle": {
-            "type": "string",
-            "description": "English title (optional, may be same as title)",
-            "example": "Tesla Stock Surges After Q4 Earnings Beat"
-          },
           "koTitle": {
             "type": "string",
             "description": "Korean title (optional)",
