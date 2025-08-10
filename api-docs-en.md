@@ -236,7 +236,6 @@ socket.on('auth:success', (data) => {
 {
   "message": "V2 WebSocket authentication successful",
   "user": {
-    "firebase_uid": "abc123...",
     "email": "user@example.com",
     "plan": "pro"
   }

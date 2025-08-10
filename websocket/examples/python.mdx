@@ -93,9 +93,9 @@ async def connect():
 async def disconnect():
     print("Disconnected")
 
-@sio.on('news:error')
-async def auth_error(error):
-    print(f"Auth failed: {error['message']}")
+@sio.on('connect_error')
+async def connection_error(error):
+    print(f"Connection failed: {error}")
 
 @sio.on('news:error')
 async def news_error(error):
@@ -108,8 +108,7 @@ async def handle_news(response):
 
 async def main():
     try:
-        await sio.connect('wss://api.byul.ai/news-v2',
-                         auth={'apiKey': os.getenv('BYUL_API_KEY')})
+        await sio.connect('wss://api.byul.ai/news-v2')
         await sio.wait()
     except Exception as e:
         print(f"Connection failed: {e}")
@@ -129,7 +128,7 @@ aiohttp>=3.8.0
 **Install and run**
 ```bash
 pip install -r requirements.txt
-BYUL_API_KEY=your_api_key python app.py
+BYUL_API_KEY=byul_api_key python app.py
 ```
 
 ## Portfolio Tracking
@@ -162,9 +161,8 @@ async def handle_news(response):
             print(f"   URL: {article['url']}\n")
 
 async def main():
-    api_key = os.getenv('BYUL_API_KEY')
     await sio.connect('wss://api.byul.ai/news-v2', 
-                      auth={'apiKey': api_key})
+                      auth={'apiKey': os.getenv('BYUL_API_KEY')})
     await sio.wait()
 
 asyncio.run(main())
@@ -217,7 +215,7 @@ async def handle_news(response):
             print("Top symbols:", top_symbols.to_dict())
 
 async def main():
-    await sio.connect('wss://api.byul.ai/news-v2',
+    await sio.connect('wss://api.byul.ai/news-v2', 
                       auth={'apiKey': os.getenv('BYUL_API_KEY')})
     await sio.wait()
 

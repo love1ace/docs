@@ -8,7 +8,7 @@ description: "Get up and running with Byul WebSocket API in 5 minutes"
 Connect to real-time financial news streams using WebSocket API.
 
 **Setup Steps:**
-- Configure WebSocket client with API authentication
+- Configure WebSocket client with API key authentication
 - Subscribe to filtered news streams
 - Handle real-time data events
 - Implement error handling and reconnection logic
@@ -71,10 +71,6 @@ socket.on('connect', () => {
   });
 });
 
-// Handle authentication success
-socket.on('auth:success', (data) => {
-  console.log('Authenticated successfully:', data.user.plan);
-});
 
 // Handle incoming news
 socket.on('news:data', (response) => {
@@ -86,6 +82,11 @@ socket.on('news:data', (response) => {
     console.log(`Category: ${article.category}`);
     console.log('---');
   });
+});
+
+// Handle authentication success
+socket.on('auth:success', (data) => {
+  console.log('Authenticated successfully:', data.user.plan);
 });
 
 // Handle errors
@@ -101,6 +102,7 @@ console.log('Connecting to Byul WebSocket...');
 import asyncio
 import socketio
 
+
 # Replace with your actual API key
 API_KEY = 'byul_api_key'
 
@@ -115,9 +117,6 @@ async def connect():
         'minImportance': 7
     })
 
-@sio.on('auth:success')
-async def auth_success(data):
-    print(f"Authenticated successfully: {data['user']['plan']}")
 
 @sio.on('news:data')
 async def handle_news(response):
@@ -128,6 +127,10 @@ async def handle_news(response):
         print(f"Importance: {article['importanceScore']}/10")
         print(f"Category: {article['category']}")
         print('---')
+
+@sio.on('auth:success')
+async def auth_success(data):
+    print(f"Authenticated successfully: {data['user']['plan']}")
 
 @sio.on('news:error')
 async def news_error(error):
@@ -173,14 +176,15 @@ function QuickstartNews() {
       });
     });
 
-    socket.on('auth:success', (data) => {
-      console.log('Authenticated successfully:', data.user.plan);
-      setStatus(`Connected (${data.user.plan})`);
-    });
 
     socket.on('news:data', (response) => {
       const { news: newNews } = response.data;
       setNews(prev => [...newNews, ...prev].slice(0, 20)); // Keep latest 20
+    });
+
+    socket.on('auth:success', (data) => {
+      console.log('Authenticated successfully:', data.user.plan);
+      setStatus(`Connected (${data.user.plan})`);
     });
 
     socket.on('news:error', (error) => {
@@ -277,7 +281,7 @@ WebSocket connection established and receiving real-time news updates.
 
 <CardGroup cols={2}>
 <Card title="Authentication" href="/websocket/authentication">
-Learn about advanced authentication methods and security
+Learn about API key authentication and security best practices
 </Card>
 <Card title="Filtering News" href="/websocket/news/filtering">
 Filter news by importance, symbols, and categories
@@ -320,3 +324,4 @@ See production-ready implementation examples
 export BYUL_API_KEY=byul_api_key
 ```
 </Info>
+

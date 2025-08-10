@@ -5,9 +5,6 @@ description: "Configure and manage stable WebSocket connections"
 
 ## Advanced Connection Configuration
 
-<Info>
-For basic connection setup, see the [Authentication](/websocket/authentication) guide first.
-</Info>
 
 ### Production-Ready Socket.IO Setup
 
@@ -76,6 +73,7 @@ class ByulWebSocket {
       
       // Send authentication message
       this.send('auth', { apiKey: this.apiKey });
+      
     };
     
     this.ws.onmessage = (event) => {
@@ -245,6 +243,7 @@ socket.on('connect_error', (error) => {
       // Show authentication error UI
       showAuthenticationError();
       break;
+      
       
     case 'RateLimitError':
       console.log('Connection limit reached. Please try again later');

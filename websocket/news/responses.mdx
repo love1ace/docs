@@ -3,35 +3,6 @@ title: "Responses"
 description: "WebSocket response formats and event structures"
 ---
 
-## Authentication Response
-
-Receive confirmation after successful authentication.
-
-```javascript
-socket.on('auth:success', (data) => {
-  console.log('Authentication successful:', data);
-});
-```
-
-**Response Structure:**
-```json
-{
-  "message": "V2 WebSocket authentication successful",
-  "user": {
-    "firebase_uid": "abc123...",
-    "email": "user@example.com",
-    "plan": "pro"
-  }
-}
-```
-
-**Fields:**
-- `message` - Success confirmation message
-- `user` - User information object
-  - `firebase_uid` - User's Firebase UID
-  - `email` - User's email address
-  - `plan` - Current subscription plan
-
 ## News Data Response
 
 Receive real-time news articles through the `news:data` event.
@@ -245,5 +216,5 @@ const logResponse = (eventName, data) => {
 };
 
 socket.on('news:data', (data) => logResponse('news:data', data));
-socket.on('auth:success', (data) => logResponse('auth:success', data));
+socket.on('connection:status', (data) => logResponse('connection:status', data));
 ```

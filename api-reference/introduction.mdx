@@ -24,7 +24,7 @@ https://api.byul.ai/api/v2
 All requests require an API key with the `byul_v2_` prefix. Include your API key in the request headers:
 
 ```bash
-X-API-Key: byul_v2_your_api_key_here
+X-API-Key: byul_api_key
 ```
 
 <Warning>
@@ -51,7 +51,7 @@ View detailed pricing plans and features at [byul.ai/api/pricing](https://www.by
 
 ```bash
 curl -X GET "https://api.byul.ai/api/v2/news?limit=10&minImportance=5" \
-  -H "X-API-Key: byul_v2_your_api_key_here"
+  -H "X-API-Key: byul_api_key"
 ```
 
 ### JavaScript Example
@@ -76,7 +76,7 @@ import requests
 
 response = requests.get(
     'https://api.byul.ai/api/v2/news?limit=10',
-    headers={'X-API-Key': 'byul_v2_your_api_key_here'}
+    headers={'X-API-Key': 'byul_api_key'}
 )
 
 news = response.json()

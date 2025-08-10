@@ -80,9 +80,7 @@ export function NewsProvider({ children }) {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io('wss://api.byul.ai/news-v2', {
-      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
-    });
+    const newSocket = io('wss://api.byul.ai/news-v2');
 
     newSocket.on('connect', () => {
       setConnected(true);
@@ -256,9 +254,7 @@ function PortfolioTracker() {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io('wss://api.byul.ai/news-v2', {
-      auth: { apiKey: process.env.REACT_APP_BYUL_API_KEY }
-    });
+    const newSocket = io('wss://api.byul.ai/news-v2');
 
     newSocket.on('connect', () => {
       // Subscribe to portfolio news
@@ -412,8 +408,8 @@ function useByulNewsWithErrors() {
       setStatus('disconnected');
     });
 
-    socket.on('news:error', (err) => {
-      setError(`Authentication failed: ${err.message}`);
+    socket.on('connect_error', (err) => {
+      setError(`Connection failed: ${err.message}`);
       setStatus('error');
     });
 
@@ -498,8 +494,5 @@ Async WebSocket clients with Python
 </Card>
 <Card title="Error Handling" href="/websocket/error-handling">
 Robust error handling and reconnection strategies
-</Card>
-<Card title="Authentication" href="/websocket/authentication">
-Secure WebSocket authentication methods
 </Card>
 </CardGroup>
