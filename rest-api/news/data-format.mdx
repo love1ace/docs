@@ -70,7 +70,6 @@ Each article in the `items` array follows this structure based on the official A
   "koTitle": "테슬라 4분기 실적 발표 후 주가 급등",
   "url": "https://www.byul.ai/news/tesla-earnings-q4-2024",
   "date": "2024-01-15T10:30:00.000Z",
-  "createdAt": "2024-01-15T10:30:00.000Z",
   "source": "byul.ai",
   "timestamp": 1705401000,
   "importanceScore": 8,
@@ -106,8 +105,6 @@ News source identifier. Always returns `"byul.ai"`
 **`date`** (string, required)  
 Article publication date in ISO 8601 format (UTC)
 
-**`createdAt`** (string, required)  
-When the article was created in our system (ISO 8601 UTC)
 
 **`timestamp`** (integer, required)  
 Unix timestamp of the article date
@@ -149,7 +146,6 @@ Sentiment analysis result:
 | `koTitle` | string | No | Text | Max 500 characters |
 | `url` | string | Yes | URL | Valid HTTPS URL |
 | `date` | string | Yes | ISO 8601 | UTC timezone |
-| `createdAt` | string | Yes | ISO 8601 | UTC timezone |
 | `source` | string | Yes | Text | Always "byul.ai" |
 | `timestamp` | integer | Yes | Unix timestamp | Positive integer |
 | `importanceScore` | integer | Yes | Number | 0-10 range |
