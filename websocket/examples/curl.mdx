@@ -63,7 +63,7 @@ curl --include \
 curl --websocket \
      --header "X-API-Key: byul_api_key" \
      wss://api.byul.ai/news-v2 \
-     --data-raw '{"type":"news:subscribe","minImportance":8,"limit":10}'
+     --data-raw '{"type":"news:subscribe","minImportance":8,"limit":10,"startDate":"2024-01-01T00:00:00.000Z","endDate":"2024-01-31T23:59:59.999Z"}'
 ```
 
 ## HTTP Alternative Testing

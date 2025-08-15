@@ -31,6 +31,23 @@ Search query to filter articles by content
 
 **`symbol`** (string, optional)  
 Filter articles related to specific stock symbol
+### Date Range
+
+Filter articles within a specific time window using ISO 8601 timestamps:
+
+**`startDate`** (string, optional)  
+Start of the date range (inclusive)
+- **Format**: ISO 8601 (UTC)
+- **Example**: `?startDate=2024-01-01T00:00:00.000Z`
+
+**`endDate`** (string, optional)  
+End of the date range (inclusive)
+- **Format**: ISO 8601 (UTC)
+- **Example**: `?endDate=2024-01-31T23:59:59.999Z`
+
+<Warning>
+If both `startDate` and `endDate` are provided, `startDate` must be less than or equal to `endDate`.
+</Warning>
 - **Format**: Stock symbol (e.g., "AAPL", "TSLA")
 - **Example**: `?symbol=AAPL`
 - **Behavior**: Returns articles where the symbol appears in the `symbols` array
@@ -106,6 +123,44 @@ const getTeslaNews = async () => {
 ```
 
 ### Search Query Filtering
+### Date Range Filtering
+
+Retrieve January articles only:
+
+<Tabs>
+<Tab title="curl">
+```bash
+curl -X GET "https://api.byul.ai/api/v2/news?startDate=2024-01-01T00:00:00.000Z&endDate=2024-01-31T23:59:59.999Z" \
+  -H "X-API-Key: byul_api_key"
+```
+</Tab>
+<Tab title="JavaScript">
+```javascript
+const januaryNews = async () => {
+  const url = new URL('https://api.byul.ai/api/v2/news');
+  url.searchParams.set('startDate', '2024-01-01T00:00:00.000Z');
+  url.searchParams.set('endDate', '2024-01-31T23:59:59.999Z');
+  const res = await fetch(url, { headers: { 'X-API-Key': process.env.BYUL_API_KEY } });
+  return res.json();
+};
+```
+</Tab>
+<Tab title="Python">
+```python
+import requests, os
+
+resp = requests.get(
+  'https://api.byul.ai/api/v2/news',
+  params={
+    'startDate': '2024-01-01T00:00:00.000Z',
+    'endDate': '2024-01-31T23:59:59.999Z'
+  },
+  headers={'X-API-Key': os.getenv('BYUL_API_KEY')}
+)
+data = resp.json()
+```
+</Tab>
+</Tabs>
 
 Find articles about specific topics:
 
@@ -125,7 +180,7 @@ const searchEarningsNews = async () => {
 Get high-impact Apple news with search query:
 
 ```bash
-curl -X GET "https://api.byul.ai/api/v2/news?symbol=AAPL&minImportance=7&q=earnings&limit=50" \
+curl -X GET "https://api.byul.ai/api/v2/news?symbol=AAPL&minImportance=7&q=earnings&limit=50&startDate=2024-01-01T00:00:00.000Z&endDate=2024-12-31T23:59:59.999Z" \
   -H "X-API-Key: byul_api_key"
 ```
 
@@ -330,3 +385,4 @@ const safeFilteredRequest = async (filters) => {
 | Fed News | `q=fed&minImportance=7` | `?q=fed&minImportance=7` |
 | Daily Digest | `minImportance=5&limit=50` | `?minImportance=5&limit=50` |
 | Real-time Updates | `sinceId=LAST_ID&minImportance=6` | `?sinceId=67850...&minImportance=6` |
+| Specific Date Range | `startDate&endDate` | `?startDate=2024-01-01T00:00:00.000Z&endDate=2024-01-31T23:59:59.999Z` |

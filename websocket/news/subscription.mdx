@@ -11,7 +11,9 @@ Start receiving real-time news updates by subscribing to specific criteria.
 socket.emit('news:subscribe', {
   minImportance: 7,
   symbol: 'AAPL',
-  limit: 20
+  limit: 20,
+  startDate: '2024-01-01T00:00:00.000Z',
+  endDate: '2024-01-31T23:59:59.999Z'
 });
 ```
 
@@ -22,6 +24,8 @@ socket.emit('news:subscribe', {
 | `minImportance` | integer | Minimum importance level (0-10) | 0 |
 | `symbol` | string | Stock symbol filter | - |
 | `limit` | integer | Max articles per batch (1-100) | 10 |
+| `startDate` | string | Start of date range filter (ISO 8601) | - |
+| `endDate` | string | End of date range filter (ISO 8601) | - |
 
 ## Subscription Confirmation
 

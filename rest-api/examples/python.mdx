@@ -13,14 +13,16 @@ import requests
 import os
 from typing import Dict, List, Optional
 
-def get_news(limit: int = 10, min_importance: int = 7) -> Dict:
+def get_news(limit: int = 10, min_importance: int = 7, start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict:
     """Fetch news from Byul AI API"""
     
     response = requests.get(
         'https://api.byul.ai/api/v2/news',
         params={
             'limit': limit,
-            'minImportance': min_importance
+            'minImportance': min_importance,
+            **({'startDate': start_date} if start_date else {}),
+            **({'endDate': end_date} if end_date else {})
         },
         headers={
             'X-API-Key': os.getenv('BYUL_API_KEY')
@@ -39,7 +41,7 @@ def get_news(limit: int = 10, min_importance: int = 7) -> Dict:
 
 # Usage
 if __name__ == "__main__":
-    news = get_news()
+    news = get_news(start_date='2024-01-01T00:00:00.000Z', end_date='2024-01-31T23:59:59.999Z')
 ```
 
 ### With Error Handling

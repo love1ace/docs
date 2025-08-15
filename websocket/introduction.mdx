@@ -64,7 +64,9 @@ const socket = io('wss://api.byul.ai/news-v2', {
 
 socket.on('connect', () => {
   socket.emit('news:subscribe', { 
-    minImportance: 8
+    minImportance: 8,
+    startDate: '2024-01-01T00:00:00.000Z',
+    endDate: '2024-01-31T23:59:59.999Z'
   });
 });
 

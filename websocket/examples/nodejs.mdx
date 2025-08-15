@@ -17,7 +17,8 @@ socket.on('connect', () => {
   console.log('Connected to Byul AI');
   
   socket.emit('news:subscribe', {
-    minImportance: 7
+    minImportance: 7,
+    startDate: '2024-01-01T00:00:00.000Z'
   });
 });
 
@@ -46,7 +47,7 @@ const byulSocket = io('wss://api.byul.ai/news-v2', {
 let latestNews = [];
 
 byulSocket.on('connect', () => {
-  byulSocket.emit('news:subscribe', { minImportance: 6 });
+  byulSocket.emit('news:subscribe', { minImportance: 6, startDate: '2024-01-01T00:00:00.000Z' });
 });
 
 byulSocket.on('news:data', (response) => {
@@ -77,7 +78,7 @@ const socket = io('wss://api.byul.ai/news-v2', {
 
 socket.on('connect', () => {
   console.log('Connected');
-  socket.emit('news:subscribe', { minImportance: 7 });
+  socket.emit('news:subscribe', { minImportance: 7, startDate: '2024-01-01T00:00:00.000Z' });
 });
 
 socket.on('disconnect', () => {
@@ -133,7 +134,9 @@ socket.on('connect', () => {
   portfolio.forEach(symbol => {
     socket.emit('news:subscribe', {
       symbol,
-      minImportance: 6
+      minImportance: 6,
+      startDate: '2024-01-01T00:00:00.000Z',
+      endDate: '2024-01-31T23:59:59.999Z'
     });
   });
 });

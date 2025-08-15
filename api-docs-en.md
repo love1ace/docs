@@ -79,13 +79,15 @@ Retrieve the latest financial news from byul.ai.
 | `limit` | integer | Number of articles to return (1-100) | 10 |
 | `cursor` | string | Pagination cursor for next page | - |
 | `sinceId` | string | Fetch articles after this ID | - |
+| `startDate` | string | Start of date range (ISO 8601) | - |
+| `endDate` | string | End of date range (ISO 8601) | - |
 | `minImportance` | integer | Minimum importance level (1-10) | 1 |
 | `q` | string | Search query | - |
 | `symbol` | string | Stock symbol filter | - |
 
 **Request Example:**
 ```bash
-curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5" \
+curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5&startDate=2024-01-01T00:00:00.000Z&endDate=2024-01-31T23:59:59.999Z" \
   -H "X-API-Key: byul_api_key"
 ```
 
@@ -212,7 +214,9 @@ socket.emit('news:subscribe', {
   limit: 20,
   minImportance: 5,
   symbol: 'AAPL',
-  q: 'tesla'
+  q: 'tesla',
+  startDate: '2024-01-01T00:00:00.000Z',
+  endDate: '2024-01-31T23:59:59.999Z'
 });
 ```
 

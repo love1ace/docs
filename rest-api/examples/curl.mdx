@@ -61,6 +61,23 @@ curl -X GET "https://api.byul.ai/api/v2/news?symbol=TSLA&minImportance=7" \
 ```
 
 ### Search by Keywords
+### Date Range Filtering
+
+Filter by a specific date window using ISO 8601 timestamps:
+
+```bash
+# January 2024
+curl -X GET "https://api.byul.ai/api/v2/news?startDate=2024-01-01T00:00:00.000Z&endDate=2024-01-31T23:59:59.999Z" \
+  -H "X-API-Key: byul_api_key"
+
+# After a given date
+curl -X GET "https://api.byul.ai/api/v2/news?startDate=2024-01-15T00:00:00.000Z" \
+  -H "X-API-Key: byul_api_key"
+
+# Before a given date
+curl -X GET "https://api.byul.ai/api/v2/news?endDate=2024-01-15T23:59:59.999Z" \
+  -H "X-API-Key: byul_api_key"
+```
 
 Search for specific topics or events:
 

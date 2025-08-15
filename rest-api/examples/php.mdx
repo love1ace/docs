@@ -10,13 +10,16 @@ icon: "php"
 
 ```php
 <?php
-function getNews($limit = 10, $minImportance = 7) {
+function getNews($limit = 10, $minImportance = 7, $startDate = null, $endDate = null) {
     $apiKey = getenv('BYUL_API_KEY');
     
-    $url = 'https://api.byul.ai/api/v2/news?' . http_build_query([
+    $params = [
         'limit' => $limit,
         'minImportance' => $minImportance
-    ]);
+    ];
+    if ($startDate) { $params['startDate'] = $startDate; }
+    if ($endDate) { $params['endDate'] = $endDate; }
+    $url = 'https://api.byul.ai/api/v2/news?' . http_build_query($params);
     
     $context = stream_context_create([
         'http' => [
@@ -49,7 +52,7 @@ function getNews($limit = 10, $minImportance = 7) {
 
 // Usage
 try {
-    $news = getNews();
+    $news = getNews(10, 7, '2024-01-01T00:00:00.000Z', '2024-01-31T23:59:59.999Z');
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
 }

@@ -27,7 +27,7 @@ function useByulNews() {
 
     socket.on('connect', () => {
       setConnected(true);
-      socket.emit('news:subscribe', { minImportance: 7 });
+      socket.emit('news:subscribe', { minImportance: 7, startDate: '2024-01-01T00:00:00.000Z' });
     });
 
     socket.on('disconnect', () => {
@@ -84,7 +84,7 @@ export function NewsProvider({ children }) {
 
     newSocket.on('connect', () => {
       setConnected(true);
-      newSocket.emit('news:subscribe', { minImportance: 6 });
+      newSocket.emit('news:subscribe', { minImportance: 6, startDate: '2024-01-01T00:00:00.000Z' });
     });
 
     newSocket.on('disconnect', () => {
@@ -102,7 +102,7 @@ export function NewsProvider({ children }) {
 
   const subscribeToSymbol = (symbol) => {
     if (socket && connected) {
-      socket.emit('news:subscribe', { symbol, minImportance: 6 });
+      socket.emit('news:subscribe', { symbol, minImportance: 6, startDate: '2024-01-01T00:00:00.000Z' });
     }
   };
 
@@ -146,7 +146,7 @@ function NewsDashboard() {
 
     socket.on('connect', () => {
       setStatus('connected');
-      socket.emit('news:subscribe', { minImportance: 6 });
+      socket.emit('news:subscribe', { minImportance: 6, startDate: '2024-01-01T00:00:00.000Z' });
     });
 
     socket.on('disconnect', () => {
@@ -261,7 +261,9 @@ function PortfolioTracker() {
       portfolio.forEach(symbol => {
         newSocket.emit('news:subscribe', { 
           symbol, 
-          minImportance: 6 
+          minImportance: 6,
+          startDate: '2024-01-01T00:00:00.000Z',
+          endDate: '2024-01-31T23:59:59.999Z'
         });
       });
     });
@@ -284,7 +286,7 @@ function PortfolioTracker() {
       setPortfolio(prev => [...prev, symbol]);
       
       if (socket) {
-        socket.emit('news:subscribe', { symbol, minImportance: 6 });
+        socket.emit('news:subscribe', { symbol, minImportance: 6, startDate: '2024-01-01T00:00:00.000Z', endDate: '2024-01-31T23:59:59.999Z' });
       }
       
       setNewSymbol('');
@@ -401,7 +403,7 @@ function useByulNewsWithErrors() {
     socket.on('connect', () => {
       setStatus('connected');
       setError(null);
-      socket.emit('news:subscribe', { minImportance: 7 });
+      socket.emit('news:subscribe', { minImportance: 7, startDate: '2024-01-01T00:00:00.000Z' });
     });
 
     socket.on('disconnect', () => {

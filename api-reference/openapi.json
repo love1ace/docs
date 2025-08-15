@@ -88,6 +88,28 @@
             "example": "tesla earnings"
           },
           {
+            "name": "startDate",
+            "in": "query",
+            "description": "Start of date range (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "End of date range (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "example": "2024-01-31T23:59:59.999Z"
+          },
+          {
             "name": "symbol",
             "in": "query",
             "description": "Stock symbol filter",

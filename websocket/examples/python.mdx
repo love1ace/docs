@@ -18,7 +18,8 @@ async def connect():
     
     # Subscribe to news
     await sio.emit('news:subscribe', {
-        'minImportance': 7
+        'minImportance': 7,
+        'startDate': '2024-01-01T00:00:00.000Z'
     })
 
 @sio.on('news:data')
@@ -48,7 +49,7 @@ latest_news = []
 
 @sio.event
 async def connect():
-    await sio.emit('news:subscribe', {'minImportance': 6})
+    await sio.emit('news:subscribe', {'minImportance': 6, 'startDate': '2024-01-01T00:00:00.000Z'})
 
 @sio.on('news:data')  
 async def handle_news(response):
@@ -87,7 +88,7 @@ sio = socketio.AsyncClient()
 @sio.event
 async def connect():
     print("Connected")
-    await sio.emit('news:subscribe', {'minImportance': 7})
+    await sio.emit('news:subscribe', {'minImportance': 7, 'startDate': '2024-01-01T00:00:00.000Z'})
 
 @sio.event
 async def disconnect():
@@ -147,7 +148,9 @@ async def connect():
     for symbol in portfolio:
         await sio.emit('news:subscribe', {
             'symbol': symbol,
-            'minImportance': 6
+            'minImportance': 6,
+            'startDate': '2024-01-01T00:00:00.000Z',
+            'endDate': '2024-01-31T23:59:59.999Z'
         })
 
 @sio.on('news:data')
@@ -181,7 +184,7 @@ news_data = []
 
 @sio.event
 async def connect():
-    await sio.emit('news:subscribe', {'minImportance': 7})
+    await sio.emit('news:subscribe', {'minImportance': 7, 'startDate': '2024-01-01T00:00:00.000Z'})
 
 @sio.on('news:data')
 async def handle_news(response):

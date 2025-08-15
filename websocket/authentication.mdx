@@ -42,7 +42,8 @@ socket.on('auth:success', (data) => {
   
   // Now safe to subscribe to news
   socket.emit('news:subscribe', {
-    minImportance: 7
+    minImportance: 7,
+    startDate: '2024-01-01T00:00:00.000Z'
   });
 });
 ```
@@ -227,7 +228,8 @@ async def auth_success(data):
     
     # Subscribe to news after authentication
     await sio.emit('news:subscribe', {
-        'minImportance': 7
+        'minImportance': 7,
+        'startDate': '2024-01-01T00:00:00.000Z'
     })
 
 @sio.on('news:error')

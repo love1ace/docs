@@ -45,7 +45,8 @@ class NewsStream {
     // Subscribe to high-importance news
     this.socket.emit('news:subscribe', {
       minImportance: 7,
-      limit: 10
+      limit: 10,
+      startDate: '2024-01-01T00:00:00.000Z'
     });
   }
   
@@ -105,6 +106,8 @@ class MultiSymbolNewsTracker {
       this.socket.emit('news:subscribe', {
         symbol,
         minImportance: 6,
+        startDate: '2024-01-01T00:00:00.000Z',
+        endDate: '2024-01-31T23:59:59.999Z'
       });
     });
   }
@@ -191,6 +194,8 @@ class MultiSymbolNewsTracker {
       this.socket.emit('news:subscribe', {
         symbol,
         minImportance: 6,
+        startDate: '2024-01-01T00:00:00.000Z',
+        endDate: '2024-01-31T23:59:59.999Z'
       });
     }
   }
@@ -240,7 +245,8 @@ const NewsDashboard = () => {
       // Subscribe to general news
       newSocket.emit('news:subscribe', {
         minImportance: 7,
-        limit: 20
+        limit: 20,
+        startDate: '2024-01-01T00:00:00.000Z'
       });
     });
     
@@ -270,7 +276,8 @@ const NewsDashboard = () => {
     if (socket) {
       socket.emit('news:subscribe', {
         symbol,
-        minImportance: 6
+        minImportance: 6,
+        startDate: '2024-01-01T00:00:00.000Z'
       });
     }
   };

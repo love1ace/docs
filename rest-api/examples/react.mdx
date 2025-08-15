@@ -47,7 +47,7 @@ app.use(express.json());
 // Proxy endpoint
 app.get('/api/news', async (req, res) => {
   try {
-    const { limit, minImportance, symbol, q } = req.query;
+    const { limit, minImportance, symbol, q, startDate, endDate } = req.query;
     
     const params = new URLSearchParams({
       limit: limit || '20',
@@ -56,6 +56,8 @@ app.get('/api/news', async (req, res) => {
     
     if (symbol) params.append('symbol', symbol);
     if (q) params.append('q', q);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
     
     const response = await fetch(`https://api.byul.ai/api/v2/news?${params}`, {
       headers: { 'X-API-Key': process.env.BYUL_API_KEY }
@@ -99,7 +101,7 @@ function NewsComponent() {
       setLoading(true);
       
       // Call your backend, not Byul API directly
-      const response = await fetch('/api/news?limit=10&minImportance=7');
+      const response = await fetch('/api/news?limit=10&minImportance=7&startDate=2024-01-01T00:00:00.000Z&endDate=2024-01-31T23:59:59.999Z');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

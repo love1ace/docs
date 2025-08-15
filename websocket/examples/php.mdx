@@ -34,11 +34,13 @@ $connector('wss://api.byul.ai/news-v2', ['Sec-WebSocket-Protocol' => 'echo-proto
         ]);
         $conn->send($auth_message);
         
-        // Subscribe to high-importance news
+        // Subscribe to high-importance news (date range)
         $subscribe_message = json_encode([
             'type' => 'news:subscribe',
             'minImportance' => 8,
-            'limit' => 20
+            'limit' => 20,
+            'startDate' => '2024-01-01T00:00:00.000Z',
+            'endDate' => '2024-01-31T23:59:59.999Z'
         ]);
         $conn->send($subscribe_message);
         

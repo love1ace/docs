@@ -109,6 +109,10 @@ Article publication date in ISO 8601 format (UTC)
 **`timestamp`** (integer, required)  
 Unix timestamp of the article date
 
+<Info>
+You can filter by date range using `startDate` and/or `endDate` query parameters. Both must be ISO 8601 UTC timestamps. When both are provided, `startDate` must be less than or equal to `endDate`.
+</Info>
+
 ### Market Data
 
 **`importanceScore`** (integer, required)  

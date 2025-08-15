@@ -67,7 +67,8 @@ socket.on('connect', () => {
   
   // Subscribe to high-importance news
   socket.emit('news:subscribe', {
-    minImportance: 7
+    minImportance: 7,
+    startDate: '2024-01-01T00:00:00.000Z'
   });
 });
 
@@ -114,7 +115,8 @@ async def connect():
     
     # Subscribe to high-importance news
     await sio.emit('news:subscribe', {
-        'minImportance': 7
+        'minImportance': 7,
+        'startDate': '2024-01-01T00:00:00.000Z'
     })
 
 
@@ -172,7 +174,8 @@ function QuickstartNews() {
       
       // Subscribe to high-importance news
       socket.emit('news:subscribe', {
-        minImportance: 7
+        minImportance: 7,
+        startDate: '2024-01-01T00:00:00.000Z'
       });
     });
 

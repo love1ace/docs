@@ -72,12 +72,15 @@ Use multiple filters together:
 // High-importance AAPL news
 socket.emit('news:subscribe', {
   symbol: 'AAPL',
-  minImportance: 8
+  minImportance: 8,
+  startDate: '2024-01-01T00:00:00.000Z',
+  endDate: '2024-01-31T23:59:59.999Z'
 });
 
 // General high-importance market news
 socket.emit('news:subscribe', {
-  minImportance: 7
+  minImportance: 7,
+  startDate: '2024-01-01T00:00:00.000Z'
 });
 ```
 

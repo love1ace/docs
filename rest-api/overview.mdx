@@ -16,6 +16,7 @@ Byul REST API v2 provides access to financial news data through RESTful JSON end
 - Symbol-based filtering  
 - Cursor-based pagination
 - Real-time updates
+- Date range filtering (startDate/endDate)
 
 ## Authentication
 
@@ -65,6 +66,8 @@ Retrieve financial news articles.
 - `q` (string): Search query
 - `cursor` (string): Pagination cursor
 - `category` (string): News category filter
+- `startDate` (string): Start of date range (ISO 8601)
+- `endDate` (string): End of date range (ISO 8601)
 
 ## Rate Limits
 
