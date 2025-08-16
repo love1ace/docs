@@ -1,0 +1,54 @@
+---
+title: "news.fetch"
+description: "MCP tool to fetch the latest financial news (proxies GET /news)"
+---
+
+## Description
+
+`news.fetch` proxies Byul's `GET /news`. Parameters are identical to the REST API.
+
+## Parameters
+
+<ParamField query="limit" type="integer" default="10">Number of articles (1-100)</ParamField>
+<ParamField query="cursor" type="string">Pagination cursor</ParamField>
+<ParamField query="sinceId" type="string">Articles created after this ID</ParamField>
+<ParamField query="minImportance" type="integer" default="1">Minimum importance (1-10)</ParamField>
+<ParamField query="q" type="string">Search query</ParamField>
+<ParamField query="symbol" type="string">Stock symbol</ParamField>
+<ParamField query="startDate" type="string">Start time (ISO 8601, UTC)</ParamField>
+<ParamField query="endDate" type="string">End time (ISO 8601, UTC)</ParamField>
+
+## Request/Response Examples
+
+<RequestExample>
+```txt MCP Call
+tools.call name="news.fetch" params={
+  "limit": 20,
+  "minImportance": 5,
+  "symbol": "AAPL",
+  "startDate": "2024-01-01T00:00:00.000Z",
+  "endDate": "2024-01-31T23:59:59.999Z"
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success
+{
+  "summary": "Returned 20 articles",
+  "payload": {
+    "items": [
+      { "_id": "67850d7b0123456789abcdef", "title": "...", "importanceScore": 8 }
+    ],
+    "nextCursor": "67850d7b0123456789abcde0",
+    "hasMore": true
+  }
+}
+```
+</ResponseExample>
+
+<Tip>
+The `payload` structure matches the REST API `GET /news` response.
+</Tip>
+
+

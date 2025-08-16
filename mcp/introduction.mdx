@@ -1,0 +1,33 @@
+---
+title: "MCP Introduction"
+description: "Overview and architecture of @byul/mcp"
+---
+
+## What does it provide?
+
+`@byul/mcp` exposes Byul's REST API through MCP tools and resources over stdio.
+
+- **Tool**: `news.fetch` – proxies `GET /news` (filters and pagination)
+- **Resource**: `byul://news{?limit,cursor,sinceId,minImportance,q,symbol,startDate,endDate}`
+- **Response format**: summary string + original JSON payload
+
+## Requirements
+
+- Node.js 18+
+- `BYUL_API_KEY` environment variable (e.g., `byul_api_key`)
+
+## Architecture
+
+<Steps>
+<Step title="Register the MCP server">
+Register `@byul/mcp` in your MCP-compatible client.
+</Step>
+<Step title="Communicate via stdio">
+The client launches the server via stdio and uses JSON-RPC over stdin/stdout.
+</Step>
+<Step title="Proxy to Byul REST API">
+Tool/resource calls are forwarded to Byul endpoints and returned as-is with a summary.
+</Step>
+</Steps>
+
+

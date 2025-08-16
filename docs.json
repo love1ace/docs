@@ -91,6 +91,50 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "MCP",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "mcp/quickstart",
+              "mcp/introduction"
+            ]
+          },
+          {
+            "group": "Setup",
+            "pages": [
+              "mcp/setup"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "mcp/tools/news-fetch"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "mcp/resources/news-resource"
+            ]
+          },
+          {
+            "group": "Error Handling",
+            "pages": [
+              "mcp/error-handling"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "mcp/examples/cursor",
+              "mcp/examples/claude-code",
+              "mcp/examples/windsurf"
+            ]
+          }
+        ]
       }
     ],
     "global": {

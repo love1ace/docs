@@ -1,0 +1,25 @@
+title: "Claude Code"
+description: "Configure @byul/mcp for the Claude Code VS Code extension"
+---
+
+## CLI
+
+```bash
+claude mcp add -e BYUL_API_KEY=byul_api_key --scope user byul npx -- -y @byul/mcp
+```
+
+## Settings JSON
+
+```json
+{
+  "mcpServers": {
+    "byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+

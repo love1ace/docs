@@ -1,0 +1,39 @@
+---
+title: "MCP Quickstart"
+description: "Get started with the @byul/mcp Model Context Protocol server"
+---
+
+## Overview
+
+`@byul/mcp` is a stdio-based MCP server that proxies the Byul REST API. It exposes a tool and a resource that forward requests to Byul endpoints and return the original JSON payload along with a brief summary string.
+
+<Info>
+Requirements: Node.js 18+ and the `BYUL_API_KEY` environment variable
+</Info>
+
+## Install and Run
+
+```bash
+BYUL_API_KEY=byul_api_key npx -y @byul/mcp
+```
+
+<Check>
+Once launched, your MCP-compatible client will communicate with the server via stdio.
+</Check>
+
+## What’s Included
+
+- Tool: `news.fetch` – proxies `GET /news` with filtering and pagination
+- Resource: `byul://news{?limit,cursor,sinceId,minImportance,q,symbol,startDate,endDate}`
+- Response: summary string (e.g., "Returned N articles") + original Byul API JSON
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Introduction" href="/mcp/introduction">Concepts and architecture</Card>
+<Card title="Setup" href="/mcp/setup">Client/editor integration</Card>
+<Card title="news.fetch" href="/mcp/tools/news-fetch">Tool specification</Card>
+<Card title="byul://news" href="/mcp/resources/news-resource">Resource specification</Card>
+</CardGroup>
+
+

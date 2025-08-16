@@ -1,0 +1,20 @@
+---
+title: "byul://news"
+description: "MCP resource - URL-based news retrieval"
+---
+
+## Description
+
+Use `byul://news{?limit,cursor,sinceId,minImportance,q,symbol,startDate,endDate}` to retrieve news with the same parameters as REST.
+
+## Example
+
+```txt
+byul://news?limit=10&minImportance=7&symbol=AAPL
+```
+
+<Info>
+The resource payload matches the REST `GET /news` response format.
+</Info>
+
+

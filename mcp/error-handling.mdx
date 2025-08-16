@@ -1,0 +1,31 @@
+---
+title: "MCP Error Handling"
+description: "Handling MCP communication and proxied Byul API errors"
+---
+
+## Common error format
+
+Errors proxied from REST follow the same format as in the REST docs:
+
+```json
+{
+  "statusCode": 401,
+  "message": "API key is required. Please provide a valid V2 API key in the X-API-Key header.",
+  "error": "Unauthorized",
+  "timestamp": "2024-01-15T10:30:00.123Z",
+  "path": "/api/v2/news"
+}
+```
+
+## Frequent issues
+
+- `Missing BYUL_API_KEY environment variable` → set the environment variable before launching
+- `Rate limit exceeded` → apply backoff/retry per REST guidance
+
+## Retry guidance
+
+<Tip>
+Apply exponential backoff for 429 and 5xx responses. You can reuse the REST examples as-is.
+</Tip>
+
+

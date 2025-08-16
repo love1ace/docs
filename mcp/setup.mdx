@@ -1,0 +1,102 @@
+---
+title: "MCP Setup"
+description: "Configure @byul/mcp in Cursor, Claude Code, Windsurf, and more"
+---
+
+## Environment variable
+
+```bash
+export BYUL_API_KEY=byul_api_key
+```
+
+<Warning>
+Never hardcode API keys. Use environment variables instead.
+</Warning>
+
+## Cursor
+
+`~/.cursor/mcp.json` or project `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+## Claude Code (VS Code extension)
+
+CLI:
+
+```bash
+claude mcp add -e BYUL_API_KEY=byul_api_key --scope user byul npx -- -y @byul/mcp
+```
+
+Settings JSON:
+
+```json
+{
+  "mcpServers": {
+    "byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+## Claude Desktop
+
+`claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+## VS Code
+
+Workspace `.vscode/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+## Windsurf
+
+`windsurf_mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "mcp-server-byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+

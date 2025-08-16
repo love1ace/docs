@@ -1,0 +1,27 @@
+title: "Cursor"
+description: "Use @byul/mcp inside the Cursor editor"
+---
+
+## Configuration file
+
+`~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+## Usage example
+
+```txt
+tools.call name="news.fetch" params={"minImportance":7,"limit":10}
+```
+
+
