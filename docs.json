@@ -131,7 +131,9 @@
             "pages": [
               "mcp/examples/cursor",
               "mcp/examples/claude-code",
-              "mcp/examples/windsurf"
+              "mcp/examples/windsurf",
+              "mcp/examples/claude-desktop",
+              "mcp/examples/gemini-cli"
             ]
           }
         ]
