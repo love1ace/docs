@@ -1,0 +1,25 @@
+title: "Claude Desktop"
+description: "Configure @byul/mcp for Claude Desktop"
+---
+
+## Configuration
+
+`claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "byul": {
+      "command": "npx",
+      "args": ["-y", "@byul/mcp"],
+      "env": { "BYUL_API_KEY": "byul_api_key" }
+    }
+  }
+}
+```
+
+<Info>
+This package supports stdio (local) transport only. HTTP/SSE transports are not provided.
+</Info>
+
+
