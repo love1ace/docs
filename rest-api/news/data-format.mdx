@@ -68,6 +68,8 @@ Each article in the `items` array follows this structure based on the official A
   "_id": "67850d7b0123456789abcdef",
   "title": "Tesla Stock Surges After Q4 Earnings Beat",
   "koTitle": "테슬라 4분기 실적 발표 후 주가 급등",
+  "content": "Tesla Inc. reported stronger-than-expected Q4 2024 earnings, with revenue beating analyst estimates by 8%. The electric vehicle maker delivered 484,507 vehicles in Q4, up 15% year-over-year, driving shares up 12% in after-hours trading.",
+  "koContent": "테슬라가 2024년 4분기 실적에서 애널리스트 예상치를 8% 상회하는 매출을 기록했습니다. 이 전기차 제조업체는 4분기에 484,507대를 인도하며 전년 대비 15% 증가했고, 시간외 거래에서 주가가 12% 상승했습니다.",
   "url": "https://www.byul.ai/news/tesla-earnings-q4-2024",
   "date": "2024-01-15T10:30:00.000Z",
   "source": "byul.ai",
@@ -99,6 +101,12 @@ Link to the original article on byul.ai
 
 **`source`** (string, required)  
 News source identifier. Always returns `"byul.ai"`
+
+**`content`** (string, optional)  
+Full or summarized article content when available. This field may be omitted for some news items.
+
+**`koContent`** (string, optional)  
+Korean content or summary when available. This field may be omitted for some news items.
 
 ### Timestamps
 
@@ -148,6 +156,8 @@ Sentiment analysis result:
 | `_id` | string | Yes | MongoDB ObjectId | 24 hex characters |
 | `title` | string | Yes | Text | Max 500 characters |
 | `koTitle` | string | No | Text | Max 500 characters |
+| `content` | string | No | Text | May be omitted; when present, contains article content/summary |
+| `koContent` | string | No | Text | May be omitted; Korean content/summary when available |
 | `url` | string | Yes | URL | Valid HTTPS URL |
 | `date` | string | Yes | ISO 8601 | UTC timezone |
 | `source` | string | Yes | Text | Always "byul.ai" |

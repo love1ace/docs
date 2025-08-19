@@ -106,6 +106,8 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5&startDate=
 | `_id` | string | Unique article ID |
 | `title` | string | Article title (primary, usually English) |
 | `koTitle` | string | Korean title (optional) |
+| `content` | string | Article content or summary (optional; may be absent) |
+| `koContent` | string | Korean content or summary (optional; may be absent) |
 | `url` | string | Original article URL |
 | `date` | string | Article date (ISO 8601 format) |
 | `createdAt` | string | Creation time (ISO 8601 format) |
@@ -124,6 +126,8 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5&startDate=
       "_id": "67850d7b0123456789abcdef",
       "title": "Tesla Stock Surges After Q4 Earnings Beat",
       "koTitle": "테슬라 4분기 실적 발표 후 주가 급등",
+      "content": "Tesla Inc. reported stronger-than-expected Q4 2024 earnings, with revenue beating analyst estimates by 8%. The electric vehicle maker delivered 484,507 vehicles in Q4, up 15% year-over-year, driving shares up 12% in after-hours trading.",
+      "koContent": "테슬라가 2024년 4분기 실적에서 애널리스트 예상치를 8% 상회하는 매출을 기록했습니다. 이 전기차 제조업체는 4분기에 484,507대를 인도하며 전년 대비 15% 증가했고, 시간외 거래에서 주가가 12% 상승했습니다.",
       "url": "https://www.byul.ai/news/tesla-earnings-q4-2024",
       "date": "2024-01-15T10:30:00.000Z",
       "createdAt": "2024-01-15T10:30:00.000Z",
@@ -138,6 +142,8 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=20&minImportance=5&startDate=
       "_id": "67850d7b0123456789abcde0",
       "title": "Fed Minutes Released, Signal Additional Rate Cuts",
       "koTitle": "연준 회의록 공개, 추가 금리 인하 시사",
+      "content": "The Federal Reserve released detailed minutes from its latest policy meeting, revealing members' concerns about economic headwinds and inflation trends. The document suggests policymakers are considering more aggressive rate cuts to support economic stability.",
+      "koContent": "연방준비제도이사회가 최근 정책 회의의 상세한 회의록을 공개했으며, 이는 위원들의 경제 역풍과 인플레이션 동향에 대한 우려를 드러냅니다. 이 문서는 정책 입안자들이 경제 안정성을 지원하기 위해 보다 적극적인 금리 인하를 고려하고 있음을 시사합니다.",
       "url": "https://www.byul.ai/news/fed-fomc-minutes-january",
       "date": "2024-01-15T09:15:00.000Z",
       "createdAt": "2024-01-15T09:15:00.000Z",
@@ -272,6 +278,8 @@ socket.on('news:data', (response) => {
         "_id": "67850d7b0123456789abcde1",
         "title": "Breaking: Fed Issues Emergency Statement",
         "koTitle": "속보: 연준 긴급성명 발표",
+        "content": "The Federal Reserve issued an unexpected emergency statement addressing current market volatility and reaffirming its commitment to price stability. The statement comes amid heightened concerns over inflation and economic uncertainty.",
+        "koContent": "연방준비제도이사회가 현재의 시장 변동성을 다루고 물가 안정에 대한 약속을 재확인하는 예상치 못한 긴급 성명을 발표했습니다. 이 성명은 인플레이션과 경제 불확실성에 대한 우려가 높아지는 가운데 나왔습니다.",
         "url": "https://www.byul.ai/news/fed-emergency-statement",
         "date": "2024-01-15T14:30:00.000Z",
         "createdAt": "2024-01-15T14:30:00.000Z",

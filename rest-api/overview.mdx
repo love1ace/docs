@@ -40,6 +40,8 @@ curl -X GET "https://api.byul.ai/api/v2/news?limit=5&minImportance=8" \
       "_id": "67850d7b0123456789abcdef",
       "title": "Federal Reserve Raises Interest Rates by 0.25%",
       "koTitle": "연준, 기준금리 0.25% 인상",
+      "content": "The Federal Open Market Committee (FOMC) announced a 0.25 percentage point increase in the federal funds rate, citing continued economic growth and persistent inflation concerns. This marks the sixth rate hike this cycle.",
+      "koContent": "연방공개시장위원회(FOMC)가 지속적인 경제 성장과 인플레이션 우려를 이유로 연방기금금리를 0.25%포인트 인상한다고 발표했습니다. 이는 현 사이클에서 여섯 번째 금리 인상입니다.",
       "url": "https://www.byul.ai/news/fed-rate-decision-2024",
       "date": "2024-01-15T14:00:00.000Z",
       "importanceScore": 9,
@@ -95,6 +97,8 @@ Retrieve financial news articles.
 - `category`: News category
 - `symbols`: Associated stock symbols (array)
 - `sentiment`: Sentiment analysis result
+- `content`: Article content or summary (optional; may be absent)
+- `koContent`: Korean content or summary (optional; may be absent)
 
 ## Next Steps
 
