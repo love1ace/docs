@@ -1,11 +1,11 @@
 ---
-title: "news.fetch"
+title: "news_fetch"
 description: "MCP tool to fetch the latest financial news (proxies GET /news)"
 ---
 
 ## Description
 
-`news.fetch` proxies Byul's `GET /news`. Parameters are identical to the REST API.
+`news_fetch` proxies Byul's `GET /news`. Parameters are identical to the REST API.
 
 ## Parameters
 
@@ -22,7 +22,7 @@ description: "MCP tool to fetch the latest financial news (proxies GET /news)"
 
 <RequestExample>
 ```txt MCP Call
-tools.call name="news.fetch" params={
+tools.call name="news_fetch" params={
   "limit": 20,
   "minImportance": 5,
   "symbol": "AAPL",

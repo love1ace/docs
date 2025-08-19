@@ -41,7 +41,7 @@ This repository contains documentation for Byul AI's financial news API with two
 - **Entry points**: CLI (`src/cli.ts`) and programmatic (`src/index.ts`)
 - **Protocol**: stdio-based MCP server implementing Model Context Protocol v1.2.0
 - **API Proxy**: Forwards requests to Byul REST API endpoints
-- **Tools**: `news.fetch` with comprehensive filtering options
+- **Tools**: `news_fetch` with comprehensive filtering options
 - **Resources**: `byul://news` resource with URL-based parameter passing
 - **Response format**: Summary string + original JSON payload from Byul API
 
