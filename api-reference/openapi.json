@@ -27,7 +27,7 @@
   "paths": {
     "/news": {
       "get": {
-        "summary": "Fetch News",
+        "summary": "Fetch",
         "description": "Retrieve the latest financial news articles with filtering and pagination support",
         "operationId": "fetchNews",
         "parameters": [
@@ -222,7 +222,7 @@
     },
     "/economic-calendar/{range}": {
       "get": {
-        "summary": "Fetch Economic Calendar",
+        "summary": "Fetch",
         "description": "Retrieve economic calendar events for predefined date ranges with optional language support",
         "operationId": "fetchEconomicCalendar",
         "parameters": [
