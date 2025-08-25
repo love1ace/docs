@@ -1,0 +1,332 @@
+---
+title: "Data Format"
+description: "Economic calendar event data structure and field descriptions"
+---
+
+## Response Structure
+
+The REST API returns economic calendar data with the following structure:
+
+```json
+{
+  "success": true,
+  "data": {
+    "events": [
+      // Array of economic events
+    ],
+    "metadata": {
+      "totalCount": 15,
+      "filteredCount": 12,
+      "range": "today",
+      "timezone": "Etc/GMT+4",
+      "language": "en",
+      "startDate": "2024-12-08T05:00:00.000Z",
+      "endDate": "2024-12-08T04:59:59.999Z"
+    }
+  }
+}
+```
+
+### Top-Level Fields
+
+**`success`** (boolean)  
+Indicates whether the request was processed successfully
+
+**`data`** (object)  
+Contains the economic calendar events and metadata
+
+**`error`** (object, only present on failure)  
+Error information when `success` is `false`
+
+## Example API Calls
+
+### Get Today's Economic Events
+
+Get today's economic events in English (default):
+```bash
+curl -X GET "https://api.byul.app/api/v2/economic-calendar/today" \
+  -H "X-API-Key: byul_api_key"
+```
+
+### Get This Week's Events in Korean
+
+Get this week's events with Korean translations:
+```bash
+curl -X GET "https://api.byul.app/api/v2/economic-calendar/this-week?lang=ko" \
+  -H "Authorization: Bearer byul_api_key"
+```
+
+### Get Tomorrow's High-Impact Events
+
+Get tomorrow's events to preview upcoming important releases:
+```bash
+curl -X GET "https://api.byul.app/api/v2/economic-calendar/tomorrow" \
+  -H "X-API-Key: byul_api_key"
+```
+
+## Economic Event Structure
+
+Each event in the `events` array follows this structure:
+
+```json
+{
+  "id": "event_67850d7b0123456789abcdef",
+  "event": "Non-Farm Payrolls",
+  "kevent": "비농업 취업자 수",
+  "zone": "United States",
+  "currency": "USD",
+  "importance": "high",
+  "date": "08/12/2024",
+  "time": "13:30",
+  "dateTime": {
+    "utc": "2024-12-08T18:30:00.000Z",
+    "local": "2024-12-08T13:30:00-05:00"
+  }
+}
+```
+
+## Field Descriptions
+
+### Core Identifiers
+
+**`id`** (string, required)  
+Unique event identifier. Use this for deduplication and referencing.
+
+**`event`** (string, required)  
+Economic indicator name in English (e.g., "Non-Farm Payrolls", "CPI", "Federal Funds Rate")
+
+**`kevent`** (string, optional)  
+Korean translation of the event name when available
+
+### Location & Market Data
+
+**`zone`** (string, required)  
+Country or region where the economic data originates (e.g., "United States", "European Union", "Japan")
+
+**`currency`** (string, required)  
+Primary currency affected by this economic indicator (e.g., "USD", "EUR", "JPY")
+
+**`importance`** (string, required)  
+Market impact level:
+- `"low"` - Minor market impact
+- `"medium"` - Moderate market impact  
+- `"high"` - Significant market impact, likely to move markets
+
+### Timing Information
+
+**`date`** (string, required)  
+Event date in MM/DD/YYYY format for display purposes
+
+**`time`** (string, required)  
+Event time in HH:MM format (24-hour), in the event's local timezone
+
+**`dateTime`** (object, required)  
+Structured datetime information:
+- **`utc`**: ISO 8601 timestamp in UTC
+- **`local`**: ISO 8601 timestamp in the event's local timezone
+
+<Info>
+All times are automatically adjusted based on the requested language. Korean requests (`lang=ko`) show times in KST (GMT+9), while English requests show times in GMT-4.
+</Info>
+
+## Metadata Object
+
+The `metadata` object provides context about the returned data:
+
+**`totalCount`** (integer)  
+Total number of events available for the specified range
+
+**`filteredCount`** (integer)  
+Number of events returned after applying any filters
+
+**`range`** (string)  
+The requested date range (e.g., "today", "this-week", "next-month")
+
+**`timezone`** (string)  
+Timezone used for the response (varies by language setting)
+
+**`language`** (string)  
+Language code used for the response ("en" or "ko")
+
+**`startDate`** (string)  
+Start of the actual date range covered (ISO 8601 UTC)
+
+**`endDate`** (string)  
+End of the actual date range covered (ISO 8601 UTC)
+
+## Data Types and Validation
+
+### Field Types
+
+| Field | Type | Required | Format | Notes |
+|-------|------|----------|--------|-------|
+| `id` | string | Yes | Unique identifier | Use for deduplication |
+| `event` | string | Yes | Text | English event name |
+| `kevent` | string | No | Text | Korean translation when available |
+| `zone` | string | Yes | Text | Country/region name |
+| `currency` | string | Yes | Currency code | 3-letter ISO code |
+| `importance` | string | Yes | Enum | low/medium/high |
+| `date` | string | Yes | MM/DD/YYYY | Display format |
+| `time` | string | Yes | HH:MM | 24-hour format |
+| `dateTime.utc` | string | Yes | ISO 8601 | UTC timestamp |
+| `dateTime.local` | string | Yes | ISO 8601 | Local timezone |
+
+### Example Validation
+
+```javascript
+const validateEvent = (event) => {
+  // Required fields
+  if (!event.id || typeof event.id !== 'string') {
+    throw new Error('Invalid event id');
+  }
+  
+  // Importance validation
+  if (!['low', 'medium', 'high'].includes(event.importance)) {
+    throw new Error('importance must be low, medium, or high');
+  }
+  
+  // Currency code validation
+  if (!event.currency || event.currency.length !== 3) {
+    throw new Error('currency must be 3-letter code');
+  }
+  
+  // DateTime validation
+  if (!event.dateTime?.utc || isNaN(new Date(event.dateTime.utc).getTime())) {
+    throw new Error('Invalid UTC datetime format');
+  }
+  
+  return true;
+};
+```
+
+## Working with the Data
+
+### Extracting Key Information
+
+```javascript
+const processEvents = (response) => {
+  if (!response.success) {
+    throw new Error(response.error?.message || 'API request failed');
+  }
+  
+  return response.data.events.map(event => ({
+    id: event.id,
+    title: event.event,
+    country: event.zone,
+    currency: event.currency,
+    impact: event.importance,
+    scheduledAt: new Date(event.dateTime.utc),
+    isHighImpact: event.importance === 'high',
+    localTime: event.time,
+    displayDate: event.date
+  }));
+};
+```
+
+### Filtering High-Impact Events
+
+```javascript
+const getHighImpactEvents = (response) => {
+  if (!response.success) return [];
+  
+  return response.data.events.filter(event => 
+    event.importance === 'high'
+  );
+};
+```
+
+### Grouping by Currency
+
+```javascript
+const groupByCurrency = (response) => {
+  if (!response.success) return {};
+  
+  return response.data.events.reduce((groups, event) => {
+    const currency = event.currency;
+    groups[currency] = groups[currency] || [];
+    groups[currency].push(event);
+    return groups;
+  }, {});
+};
+```
+
+### Currency-Specific Events
+
+```javascript
+const getUSDEvents = (response) => {
+  if (!response.success) return [];
+  
+  return response.data.events.filter(event => 
+    event.currency === 'USD'
+  );
+};
+```
+
+## Language Handling
+
+The API supports both English and Korean responses:
+
+### English Response (Default)
+```javascript
+const getEnglishEvents = async () => {
+  const response = await fetch('https://api.byul.app/api/v2/economic-calendar/today', {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  
+  const data = await response.json();
+  // Events will have English names and GMT-4 timezone
+  return data;
+};
+```
+
+### Korean Response
+```javascript
+const getKoreanEvents = async () => {
+  const response = await fetch('https://api.byul.app/api/v2/economic-calendar/today?lang=ko', {
+    headers: { 'X-API-Key': process.env.BYUL_API_KEY }
+  });
+  
+  const data = await response.json();
+  // Events will have Korean translations and KST (GMT+9) timezone
+  return data;
+};
+```
+
+## Error Response Format
+
+When `success` is `false`, the response includes error details:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_RANGE",
+    "message": "Invalid range parameter. Allowed values: today, yesterday, tomorrow, this-week, last-week, next-week, this-month, next-month",
+    "details": "Received: custom"
+  }
+}
+```
+
+### Error Fields
+
+**`code`** (string)  
+Error type identifier for programmatic handling
+
+**`message`** (string)  
+Human-readable error description
+
+**`details`** (string, optional)  
+Additional context about the error
+
+## Data Consistency
+
+The economic calendar data structure is consistent across different date ranges and language settings:
+
+**Key consistency points:**
+- Field names and types remain identical
+- `importance` is always a string enum (low/medium/high)
+- All timestamps follow ISO 8601 format
+- Currency codes are always 3-letter ISO codes
+- Event IDs are globally unique
+
+This consistency allows you to use the same data processing functions regardless of the date range or language requested.
