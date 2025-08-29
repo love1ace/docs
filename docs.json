@@ -30,14 +30,6 @@
             ]
           },
           {
-            "group": "Economic Calendar",
-            "pages": [
-              "api-reference/endpoint/economic-calendar",
-              "rest-api/economic-calendar/data-format",
-              "rest-api/economic-calendar/filtering"
-            ]
-          },
-          {
             "group": "Error Handling",
             "pages": [
               "rest-api/error-handling"
